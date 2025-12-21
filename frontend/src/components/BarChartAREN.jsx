@@ -11,7 +11,7 @@ import {
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
-function BarChart({ data }) {
+function BarChartAREN({ data }) {
   const labels = data.map(row => new Date(row.UpdateDate).toLocaleDateString());
   const collisionsData = data.map(row => row.CollisionsAmount);
 
@@ -19,9 +19,9 @@ function BarChart({ data }) {
     labels,
     datasets: [
       {
-        label: 'Коллизии',
+        label: 'Сумма коллизий АР-ИС',
         data: collisionsData,
-        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+        backgroundColor: 'rgba(255, 99, 132, 0.7)',
       },
     ],
   };
@@ -32,7 +32,8 @@ function BarChart({ data }) {
       legend: { position: 'top' },
       tooltip: {
         callbacks: {
-          label: context => `${context.dataset.label}: ${context.parsed.y}`,
+          label: context => `${context.parsed.y}`,
+          // label: context => `${context.dataset.label}: ${context.parsed.y}`,
         },
       },
     },
@@ -45,4 +46,4 @@ function BarChart({ data }) {
   return <Bar data={chartData} options={options} />;
 }
 
-export default BarChart;
+export default BarChartAREN;

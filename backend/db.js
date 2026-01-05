@@ -63,6 +63,43 @@ async function getEntriesUpdatesARAR() {
   return rows.reverse();
 }
 
+async function getArArDetails() {
+  const sql = `
+    WITH LatestData AS (
+      SELECT DISTINCT ON (e."ID") 
+        e."ID",
+        -- Убираем 'АР_' из названия для группировки
+        REPLACE(TRIM(
+          SUBSTRING(
+            e."Name" FROM 
+            STRPOS(e."Name", '_АР-АР_') + 7 FOR 
+            (STRPOS(e."Name", '_VS_') - (STRPOS(e."Name", '_АР-АР_') + 7))
+          )
+        ), 'АР_', '') AS "PrimaryElement",
+        -- Убираем 'АР_' из полного названия для деталей
+        REPLACE(e."Name", 'АР_', '') AS "CleanName",
+        eu."CollisionsAmount"
+      FROM "Entries" e
+      JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
+      WHERE e."Name" LIKE '%_АР-АР_%'
+      ORDER BY e."ID", eu."UpdateDate" DESC
+    )
+    SELECT 
+      "PrimaryElement",
+      COUNT("CleanName") || ' элементов' as "SubElementsCount",
+      SUM("CollisionsAmount") as "GroupTotal",
+      json_agg(json_build_object(
+        'full_name', "CleanName",
+        'amount', "CollisionsAmount"
+      )) as "Details"
+    FROM LatestData
+    GROUP BY "PrimaryElement"
+    ORDER BY "GroupTotal" DESC;
+  `;
+  const { rows } = await currentPool.query(sql);
+  return rows;
+}
+
 async function getEntriesUpdatesARTH() {
   const sql = `
     SELECT
@@ -300,4 +337,5 @@ module.exports = {
   getEntriesUpdatesARDUBLE,
   getEntriesUpdatesKRDUBLE,
   getEntriesUpdatesENEN,
+  getArArDetails,
 };

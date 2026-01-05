@@ -143,6 +143,46 @@ app.get('/api/comparison/enen', async (req, res) => {
   }
 });
 
+// backend/index.js
+
+app.get('/api/details/arar', async (req, res) => {
+  try {
+    const details = await db.getArArDetails();
+    res.json(details);
+  } catch (err) {
+    console.error('Ошибка при получении деталей АР-АР:', err);
+    res.status(500).json({ error: 'Ошибка сервера при обработке статистики' });
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server listening on port ${PORT}`);
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Добавление роли пользователя
+
+app.post('/users/:id/role', async (req, res) => {
+  const { id } = req.params;
+  const { role } = req.body;
+  await db.query('UPDATE users SET role = $1 WHERE id = $2', [role, id]);
+  await db.query('INSERT INTO logs (user_id, action) VALUES ($1, $2)', [id, 'role_changed']);
+  res.status(200).json({ message: 'Role updated' });
+});
+
+
+const validateEmail = (email) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};

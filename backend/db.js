@@ -66,33 +66,50 @@ async function getEntriesUpdatesARAR() {
 async function getArArDetails() {
   const sql = `
     WITH LatestData AS (
+      -- 1. Получаем самые свежие данные для каждого ID записи
       SELECT DISTINCT ON (e."ID") 
         e."ID",
-        -- Убираем 'АР_' из названия для группировки
-        REPLACE(TRIM(
+        e."Name",
+        -- Извлекаем Основной элемент и чистим префиксы
+        REPLACE(REPLACE(TRIM(
           SUBSTRING(
             e."Name" FROM 
             STRPOS(e."Name", '_АР-АР_') + 7 FOR 
             (STRPOS(e."Name", '_VS_') - (STRPOS(e."Name", '_АР-АР_') + 7))
           )
-        ), 'АР_', '') AS "PrimaryElement",
-        -- Убираем 'АР_' из полного названия для деталей
-        REPLACE(e."Name", 'АР_', '') AS "CleanName",
+        ), 'АР_', ''), 'АР-', '') AS "PrimaryElement",
+        
+        -- Извлекаем категорию после _VS_ и чистим префиксы
+        REPLACE(REPLACE(TRIM(
+          SUBSTRING(e."Name" FROM STRPOS(e."Name", '_VS_') + 4)
+        ), 'АР_', ''), 'АР-', '') AS "CategoryElement",
+        
         eu."CollisionsAmount"
       FROM "Entries" e
       JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
       WHERE e."Name" LIKE '%_АР-АР_%'
       ORDER BY e."ID", eu."UpdateDate" DESC
+    ),
+    MergedCategories AS (
+      -- 2. Группируем по ОБОИМ элементам, чтобы сложить значения одинаковых категорий
+      SELECT 
+        "PrimaryElement",
+        "CategoryElement",
+        SUM("CollisionsAmount") as "TotalCollisions"
+      FROM LatestData
+      GROUP BY "PrimaryElement", "CategoryElement"
     )
+    -- 3. Собираем финальный JSON с агрегацией по PrimaryElement
     SELECT 
       "PrimaryElement",
-      COUNT("CleanName") || ' элементов' as "SubElementsCount",
-      SUM("CollisionsAmount") as "GroupTotal",
+      COUNT("CategoryElement") as "SubElementsCount",
+      SUM("TotalCollisions") as "GroupTotal",
       json_agg(json_build_object(
-        'full_name', "CleanName",
-        'amount', "CollisionsAmount"
-      )) as "Details"
-    FROM LatestData
+        'primary_part', "PrimaryElement",
+        'category_part', "CategoryElement",
+        'amount', "TotalCollisions"
+      ) ORDER BY "TotalCollisions" DESC) as "Details"
+    FROM MergedCategories
     GROUP BY "PrimaryElement"
     ORDER BY "GroupTotal" DESC;
   `;

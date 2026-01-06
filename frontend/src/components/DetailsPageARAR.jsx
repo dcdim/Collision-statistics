@@ -5,153 +5,168 @@ import {
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import { useNavigate } from 'react-router-dom';
+import DbSelector from './DbSelector'; // Импорт вашего компонента выбора БД
 
-/**
- * Вспомогательный компонент для раскрывающейся строки
- */
-function Row({ row }) {
-  const [open, setOpen] = useState(false);
+const getPluralCategory = (count) => {
+  const lastDigit = count % 10;
+  const lastTwoDigits = count % 100;
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 19) return 'категорий';
+  if (lastDigit === 1) return 'категория';
+  if (lastDigit >= 2 && lastDigit <= 4) return 'категории';
+  return 'категорий';
+};
+
+function Row({ row, isOpen, onToggle }) {
+  const detailsCount = row.Details ? row.Details.length : 0;
+  const isSingle = detailsCount === 1;
+  const singleDetail = isSingle ? row.Details[0] : null;
 
   return (
     <React.Fragment>
-      <TableRow className="collapsible-row" onClick={() => setOpen(!open)}>
-        <TableCell width="50">
-          <IconButton size="small">
-            {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-          </IconButton>
+      <TableRow 
+        className={isSingle ? 'static-row' : `collapsible-row ${isOpen ? 'row-active' : ''}`} 
+        onClick={!isSingle ? onToggle : undefined}
+      >
+        <TableCell width="50px">
+          {!isSingle && (
+            <IconButton size="small" color={isOpen ? "primary" : "default"}>
+              {isOpen ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+            </IconButton>
+          )}
         </TableCell>
-        <TableCell>
-          <Typography variant="body1" sx={{ fontWeight: 600 }}>
-            {row.PrimaryElement}
-          </Typography>
+        <TableCell width="35%" className="font-weight-600">{row.PrimaryElement}</TableCell>
+        <TableCell width="45%">
+          {isSingle ? singleDetail.category_part : (!isOpen ? `${detailsCount} ${getPluralCategory(detailsCount)}` : "")}
         </TableCell>
-        <TableCell>
-          <Typography variant="body2" color="textSecondary">
-            {open ? 'Список развернут' : row.SubElementsCount}
-          </Typography>
-        </TableCell>
-        <TableCell align="right">
-          <Typography variant="body1" sx={{ fontWeight: 600 }}>
-            {row.GroupTotal}
-          </Typography>
-        </TableCell>
+        <TableCell width="15%" align="right" className="font-weight-700">{row.GroupTotal}</TableCell>
       </TableRow>
 
-      <TableRow>
-        <TableCell sx={{ py: 0 }} colSpan={6}>
-          <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box className="details-expanded-box">
-              <div className="details-subtitle">Состав коллизий группы</div>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>Тип проверки</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600 }}>Кол-во</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {row.Details.map((detail, idx) => (
-                    <TableRow key={idx} hover>
-                      <TableCell>{detail.full_name}</TableCell>
-                      <TableCell align="right">{detail.amount}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Box>
-          </Collapse>
-        </TableCell>
-      </TableRow>
+      {!isSingle && (
+        <TableRow>
+          <TableCell colSpan={4} sx={{ py: 0, px: 0 }}> 
+            <Collapse in={isOpen} timeout="auto" unmountOnExit>
+              <Box className="details-expanded-box-active">
+                <Table size="small" sx={{ tableLayout: 'fixed' }}>
+                  <TableBody>
+                    {row.Details.map((detail, idx) => (
+                      <TableRow key={idx} className="inner-detail-row">
+                        <TableCell width="50px" sx={{ border: 'none' }} />
+                        <TableCell width="35%" sx={{ border: 'none' }}>{detail.primary_part}</TableCell>
+                        <TableCell width="45%" sx={{ border: 'none' }}>{detail.category_part}</TableCell>
+                        <TableCell width="15%" align="right" sx={{ border: 'none', pr: 4 }}>{detail.amount}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Box>
+            </Collapse>
+          </TableCell>
+        </TableRow>
+      )}
     </React.Fragment>
   );
 }
 
-/**
- * Основной компонент страницы
- */
 const DetailsPageARAR = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [openRows, setOpenRows] = useState({}); 
   const navigate = useNavigate();
 
-  useEffect(() => {
+  // Основная функция загрузки данных
+  const loadData = () => {
+    setLoading(true);
     fetch('/api/details/arar')
-      .then((res) => res.json())
-      .then((json) => {
+      .then(res => res.json())
+      .then(json => {
         setData(json);
         setLoading(false);
       })
-      .catch((err) => {
-        console.error("Fetch error:", err);
+      .catch(err => {
+        console.error("Ошибка загрузки:", err);
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
+
+  // Обработчик смены базы данных
+  const handleDbChange = async (dbName) => {
+    try {
+      await fetch('/api/switch-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dbName }),
+      });
+      setOpenRows({}); // Закрываем все раскрытые строки
+      loadData();      // Перезагружаем данные для новой БД
+    } catch (err) {
+      console.error("Ошибка при смене БД:", err);
+    }
+  };
 
   const grandTotal = data.reduce((sum, row) => sum + Number(row.GroupTotal), 0);
 
-  if (loading) {
-    return (
-      <Box sx={{ p: 8, textAlign: 'center' }}>
-        <Typography variant="h6" color="textSecondary">Загрузка детальной статистики...</Typography>
-      </Box>
-    );
-  }
-
   return (
     <div className="details-page-container">
-      <Button 
-        onClick={() => navigate(-1)} 
-        variant="outlined" 
-        className="back-button"
-      >
-        ← Назад к дашборду
-      </Button>
+      {/* Верхняя панель: Кнопки навигации слева, Селектор БД справа */}
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button onClick={() => navigate(-1)} variant="outlined" className="back-button">← Назад</Button>
+          {Object.values(openRows).some(v => v) && (
+            <Button onClick={() => setOpenRows({})} variant="outlined" className="back-button" startIcon={<UnfoldLessIcon />}>
+              Свернуть всё
+            </Button>
+          )}
+        </Box>
+        
+        {/* Компонент выбора базы данных */}
+        <DbSelector onSelect={handleDbChange} />
+      </Box>
 
-      <Typography variant="h4" className="details-title">
-        Детализация коллизий: АР-АР
-      </Typography>
+      <Typography variant="h4" className="details-title">Детализация коллизий: АР-АР</Typography>
       
-      <TableContainer component={Paper} elevation={3} sx={{ borderRadius: '12px' }}>
-        <Table aria-label="AR-AR details table">
-          <TableHead className="table-header-dark">
-            <TableRow>
-              <TableCell />
-              <TableCell>Основной элемент</TableCell>
-              <TableCell>Категория элементов</TableCell>
-              <TableCell align="right">Коллизии (ед.)</TableCell>
-            </TableRow>
-          </TableHead>
-          
-          <TableBody>
-            {data.length > 0 ? (
-              data.map((row) => (
-                <Row key={row.PrimaryElement} row={row} />
-              ))
-            ) : (
+      {loading ? (
+        <Box sx={{ p: 8, textAlign: 'center' }}><Typography variant="h6">Обновление данных...</Typography></Box>
+      ) : (
+        <TableContainer component={Paper} elevation={3} sx={{ borderRadius: '12px', overflow: 'hidden' }}>
+          <Table sx={{ tableLayout: 'fixed' }}>
+            <TableHead className="table-header-dark">
               <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 10 }}>
-                  Данные по фильтру АР-АР не найдены
+                <TableCell width="50px" />
+                <TableCell width="35%">Основной элемент</TableCell>
+                <TableCell width="45%">Проверка с категорией</TableCell>
+                <TableCell width="15%" align="right">Сумма коллизий</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {data.map((row) => (
+                <Row 
+                  key={row.PrimaryElement} 
+                  row={row} 
+                  isOpen={!!openRows[row.PrimaryElement]}
+                  onToggle={() => setOpenRows(prev => ({ ...prev, [row.PrimaryElement]: !prev[row.PrimaryElement] }))}
+                />
+              ))}
+            </TableBody>
+            <TableFooter className="table-footer-summary">
+              <TableRow>
+                <TableCell width="50px" />
+                <TableCell colSpan={2} align="right" sx={{ pr: 2 }}>
+                  <Typography className="total-label" variant="h6">ИТОГО:</Typography>
+                </TableCell>
+                <TableCell align="right">
+                  <Typography className="total-value" variant="h6">{grandTotal}</Typography>
                 </TableCell>
               </TableRow>
-            )}
-          </TableBody>
-
-          <TableFooter className="table-footer-summary">
-            <TableRow>
-              <TableCell />
-              <TableCell colSpan={2} align="right">
-                <Typography className="total-label" variant="h6">ИТОГО ПО РАЗДЕЛУ:</Typography>
-              </TableCell>
-              <TableCell align="right">
-                <Typography className="total-value" variant="h6">
-                  {grandTotal}
-                </Typography>
-              </TableCell>
-            </TableRow>
-          </TableFooter>
-        </Table>
-      </TableContainer>
+            </TableFooter>
+          </Table>
+        </TableContainer>
+      )}
     </div>
   );
 };

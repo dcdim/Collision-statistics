@@ -7,8 +7,8 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import { useNavigate } from 'react-router-dom';
-import DbSelector from './DbSelector'; // Импорт компонента выбора БД
- 
+import DbSelector from './DbSelector';
+
 const getPluralCategory = (count) => {
   const lastDigit = count % 10;
   const lastTwoDigits = count % 100;
@@ -17,7 +17,7 @@ const getPluralCategory = (count) => {
   if (lastDigit >= 2 && lastDigit <= 4) return 'категории';
   return 'категорий';
 };
- 
+
 function Row({ row, isOpen, onToggle }) {
   const detailsCount = row.Details ? row.Details.length : 0;
   const isSingle = detailsCount === 1;
@@ -36,28 +36,13 @@ function Row({ row, isOpen, onToggle }) {
             </IconButton>
           )}
         </TableCell>
-        
-        {/* Столбец АР */}
-        <TableCell width="35%" className="font-weight-600">
-          {row.PrimaryElement}
-        </TableCell>
-        
-        {/* Столбец КР (или количество категорий) */}
+        <TableCell width="35%" className="font-weight-600">{row.PrimaryElement}</TableCell>
         <TableCell width="45%">
-          {isSingle ? (
-            singleDetail.category_part
-          ) : (
-            !isOpen ? `${detailsCount} ${getPluralCategory(detailsCount)}` : ""
-          )}
+          {isSingle ? singleDetail.category_part : (!isOpen ? `${detailsCount} ${getPluralCategory(detailsCount)}` : "")}
         </TableCell>
-        
-        {/* Сумма коллизий */}
-        <TableCell width="15%" align="right" className="font-weight-700">
-          {row.GroupTotal}
-        </TableCell>
+        <TableCell width="15%" align="right" className="font-weight-700">{row.GroupTotal}</TableCell>
       </TableRow>
 
-      {/* Вложенная таблица деталей */}
       {!isSingle && (
         <TableRow>
           <TableCell colSpan={4} sx={{ py: 0, px: 0 }}> 
@@ -68,15 +53,9 @@ function Row({ row, isOpen, onToggle }) {
                     {row.Details.map((detail, idx) => (
                       <TableRow key={idx} className="inner-detail-row">
                         <TableCell width="50px" sx={{ border: 'none' }} />
-                        <TableCell width="35%" sx={{ border: 'none' }}>
-                          {detail.primary_part}
-                        </TableCell>
-                        <TableCell width="45%" sx={{ border: 'none' }}>
-                          {detail.category_part}
-                        </TableCell>
-                        <TableCell width="15%" align="right" sx={{ border: 'none', pr: 4 }}>
-                          {detail.amount}
-                        </TableCell>
+                        <TableCell width="35%" sx={{ border: 'none' }}>{detail.primary_part}</TableCell>
+                        <TableCell width="45%" sx={{ border: 'none' }}>{detail.category_part}</TableCell>
+                        <TableCell width="15%" align="right" sx={{ border: 'none', pr: 4 }}>{detail.amount}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -90,79 +69,55 @@ function Row({ row, isOpen, onToggle }) {
   );
 }
 
-const DetailsPageARKR = () => {
+const DetailsPageARTH = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({}); 
   const navigate = useNavigate();
 
-  // Функция загрузки данных именно для раздела АР-КР
   const loadData = () => {
     setLoading(true);
-    fetch('/api/details/arkr') // Вызов эндпоинта для АР-КР
+    fetch('/api/details/arth')
       .then(res => res.json())
       .then(json => {
         setData(json);
         setLoading(false);
       })
-      .catch(err => {
-        console.error("Ошибка загрузки АР-КР:", err);
-        setLoading(false);
-      });
+      .catch(() => setLoading(false));
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
-  // Обработчик смены базы данных
   const handleDbChange = async (dbName) => {
-    try {
-      await fetch('/api/switch-db', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dbName }),
-      });
-      setOpenRows({}); 
-      loadData();      
-    } catch (err) {
-      console.error("Ошибка при смене БД:", err);
-    }
+    await fetch('/api/switch-db', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dbName }),
+    });
+    setOpenRows({});
+    loadData();
   };
 
   const grandTotal = data.reduce((sum, row) => sum + Number(row.GroupTotal), 0);
 
   return (
     <div className="details-page-container">
-      {/* Панель управления */}
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button onClick={() => navigate(-1)} variant="outlined" className="back-button">
-            ← Назад
-          </Button>
+          <Button onClick={() => navigate(-1)} variant="outlined" className="back-button">← Назад</Button>
           {Object.values(openRows).some(v => v) && (
-            <Button 
-              onClick={() => setOpenRows({})} 
-              variant="outlined" 
-              className="back-button" 
-              startIcon={<UnfoldLessIcon />}
-            >
+            <Button onClick={() => setOpenRows({})} variant="outlined" className="back-button" startIcon={<UnfoldLessIcon />}>
               Свернуть всё
             </Button>
           )}
         </Box>
-        
         <DbSelector onSelect={handleDbChange} />
       </Box>
 
-      <Typography variant="h4" className="details-title">
-        Детализация коллизий: АР-КР
-      </Typography>
+      <Typography variant="h4" className="details-title">Детализация коллизий: АР-ТХ</Typography>
       
       {loading ? (
-        <Box sx={{ p: 8, textAlign: 'center' }}>
-          <Typography variant="h6" color="textSecondary">Загрузка данных АР-КР...</Typography>
-        </Box>
+        <Box sx={{ p: 8, textAlign: 'center' }}><Typography variant="h6">Загрузка данных АР-ТХ...</Typography></Box>
       ) : (
         <TableContainer component={Paper} elevation={3} sx={{ borderRadius: '12px', overflow: 'hidden' }}>
           <Table sx={{ tableLayout: 'fixed' }}>
@@ -180,10 +135,7 @@ const DetailsPageARKR = () => {
                   key={row.PrimaryElement} 
                   row={row} 
                   isOpen={!!openRows[row.PrimaryElement]}
-                  onToggle={() => setOpenRows(prev => ({ 
-                    ...prev, 
-                    [row.PrimaryElement]: !prev[row.PrimaryElement] 
-                  }))}
+                  onToggle={() => setOpenRows(prev => ({ ...prev, [row.PrimaryElement]: !prev[row.PrimaryElement] }))}
                 />
               ))}
             </TableBody>
@@ -205,4 +157,4 @@ const DetailsPageARKR = () => {
   );
 };
 
-export default DetailsPageARKR;
+export default DetailsPageARTH;

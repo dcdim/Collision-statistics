@@ -163,6 +163,17 @@ app.get('/api/details/arkr', async (req, res) => {
   }
 });
 
+
+app.get('/api/details/arth', async (req, res) => {
+  try {
+    const details = await db.getArThDetails();
+    res.json(details);
+  } catch (err) {
+    console.error('Ошибка при получении деталей АР-ТХ:', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server listening on port ${PORT}`);
 });

@@ -183,6 +183,59 @@ async function getEntriesUpdatesArTh() {
   return rows.reverse();
 }
 
+async function getArThDetails() {
+  const sql = `
+    WITH LatestData AS (
+      -- 1. Берем только последние данные для каждого ID записи
+      SELECT DISTINCT ON (e."ID") 
+        e."ID",
+        e."Name",
+        -- Извлекаем АР-часть и чистим префиксы (АР_, АР-, АР )
+        REPLACE(REPLACE(REPLACE(TRIM(
+          SUBSTRING(
+            e."Name" FROM 
+            STRPOS(e."Name", '_АР-ТХ_') + 7 FOR 
+            (STRPOS(e."Name", '_VS_') - (STRPOS(e."Name", '_АР-ТХ_') + 7))
+          )
+        ), 'АР_', ''), 'АР-', ''), 'АР ', '') AS "PrimaryElement",
+        
+        -- Извлекаем ТХ-часть (после _VS_) и чистим префиксы (ТХ_, ТХ-, ТХ )
+        REPLACE(REPLACE(REPLACE(TRIM(
+          SUBSTRING(e."Name" FROM STRPOS(e."Name", '_VS_') + 4)
+        ), 'ТХ_', ''), 'ТХ-', ''), 'ТХ ', '') AS "CategoryElement",
+        
+        eu."CollisionsAmount"
+      FROM "Entries" e
+      JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
+      WHERE e."Name" LIKE '%_АР-ТХ_%'
+      ORDER BY e."ID", eu."UpdateDate" DESC
+    ),
+    MergedData AS (
+      -- 2. Группируем по очищенным парам элементов
+      SELECT 
+        "PrimaryElement",
+        "CategoryElement",
+        SUM("CollisionsAmount") as "TotalAmount"
+      FROM LatestData
+      GROUP BY "PrimaryElement", "CategoryElement"
+    )
+    -- 3. Агрегация для таблицы
+    SELECT 
+      "PrimaryElement",
+      SUM("TotalAmount") as "GroupTotal",
+      json_agg(json_build_object(
+        'primary_part', "PrimaryElement",
+        'category_part', "CategoryElement",
+        'amount', "TotalAmount"
+      ) ORDER BY "TotalAmount" DESC) as "Details"
+    FROM MergedData
+    GROUP BY "PrimaryElement"
+    ORDER BY "GroupTotal" DESC;
+  `;
+  const { rows } = await currentPool.query(sql);
+  return rows;
+}
+
 async function getEntriesUpdatesKrKr() {
   const sql = `
     SELECT
@@ -406,4 +459,5 @@ module.exports = {
   getEntriesUpdatesEnEn,
   getArArDetails,
   getArKrDetails,
+  getArThDetails,
 };

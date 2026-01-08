@@ -37,7 +37,7 @@ app.get('/api/entries', async (req, res) => {
 
 app.get('/api/comparison', async (req, res) => {
   try {
-    const entriesUpdates = await db.getEntriesUpdates();
+    const entriesUpdates = await db.getEntriesUpdatesArKr();
     res.json(entriesUpdates);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -46,7 +46,7 @@ app.get('/api/comparison', async (req, res) => {
 
 app.get('/api/comparison/arar', async (req, res) => {
   try {
-    const entriesUpdates = await db.getEntriesUpdatesARAR();
+    const entriesUpdates = await db.getEntriesUpdatesArAr();
     res.json(entriesUpdates);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -55,7 +55,7 @@ app.get('/api/comparison/arar', async (req, res) => {
 
 app.get('/api/comparison/arth', async (req, res) => {
   try {
-    const entriesUpdates = await db.getEntriesUpdatesARTH();
+    const entriesUpdates = await db.getEntriesUpdatesArTh();
     res.json(entriesUpdates);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -64,7 +64,7 @@ app.get('/api/comparison/arth', async (req, res) => {
 
 app.get('/api/comparison/krkr', async (req, res) => {
   try {
-    const entriesUpdates = await db.getEntriesUpdatesKRKR();
+    const entriesUpdates = await db.getEntriesUpdatesKrKr();
     res.json(entriesUpdates);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -73,7 +73,7 @@ app.get('/api/comparison/krkr', async (req, res) => {
 
 app.get('/api/comparison/krth', async (req, res) => {
   try {
-    const entriesUpdates = await db.getEntriesUpdatesKRTH();
+    const entriesUpdates = await db.getEntriesUpdatesKrTh();
     res.json(entriesUpdates);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -82,7 +82,7 @@ app.get('/api/comparison/krth', async (req, res) => {
 
 app.get('/api/comparison/thth', async (req, res) => {
   try {
-    const entriesUpdates = await db.getEntriesUpdatesTHTH();
+    const entriesUpdates = await db.getEntriesUpdatesThTh();
     res.json(entriesUpdates);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -91,7 +91,7 @@ app.get('/api/comparison/thth', async (req, res) => {
 
 app.get('/api/comparison/aren', async (req, res) => {
   try {
-    const entriesUpdates = await db.getEntriesUpdatesAREN();
+    const entriesUpdates = await db.getEntriesUpdatesArEn();
     res.json(entriesUpdates);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -100,7 +100,7 @@ app.get('/api/comparison/aren', async (req, res) => {
 
 app.get('/api/comparison/kren', async (req, res) => {
   try {
-    const entriesUpdates = await db.getEntriesUpdatesKREN();
+    const entriesUpdates = await db.getEntriesUpdatesKrEn();
     res.json(entriesUpdates);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -109,7 +109,7 @@ app.get('/api/comparison/kren', async (req, res) => {
 
 app.get('/api/comparison/then', async (req, res) => {
   try {
-    const entriesUpdates = await db.getEntriesUpdatesTHEN();
+    const entriesUpdates = await db.getEntriesUpdatesThEn();
     res.json(entriesUpdates);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -118,7 +118,7 @@ app.get('/api/comparison/then', async (req, res) => {
 
 app.get('/api/comparison/arduble', async (req, res) => {
   try {
-    const entriesUpdates = await db.getEntriesUpdatesARDUBLE();
+    const entriesUpdates = await db.getEntriesUpdatesArDuble();
     res.json(entriesUpdates);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -127,7 +127,7 @@ app.get('/api/comparison/arduble', async (req, res) => {
 
 app.get('/api/comparison/krduble', async (req, res) => {
   try {
-    const entriesUpdates = await db.getEntriesUpdatesKRDUBLE();
+    const entriesUpdates = await db.getEntriesUpdatesKrDuble();
     res.json(entriesUpdates);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -136,14 +136,12 @@ app.get('/api/comparison/krduble', async (req, res) => {
 
 app.get('/api/comparison/enen', async (req, res) => {
   try {
-    const entriesUpdates = await db.getEntriesUpdatesENEN();
+    const entriesUpdates = await db.getEntriesUpdatesEnEn();
     res.json(entriesUpdates);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
-// backend/index.js
 
 app.get('/api/details/arar', async (req, res) => {
   try {
@@ -151,6 +149,16 @@ app.get('/api/details/arar', async (req, res) => {
     res.json(details);
   } catch (err) {
     console.error('Ошибка при получении деталей АР-АР:', err);
+    res.status(500).json({ error: 'Ошибка сервера при обработке статистики' });
+  }
+
+});
+app.get('/api/details/arkr', async (req, res) => {
+  try {
+    const details = await db.getArKrDetails();
+    res.json(details);
+  } catch (err) {
+    console.error('Ошибка при получении деталей АР-КР:', err);
     res.status(500).json({ error: 'Ошибка сервера при обработке статистики' });
   }
 });

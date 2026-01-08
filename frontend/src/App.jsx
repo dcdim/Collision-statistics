@@ -16,6 +16,7 @@ import BarChartARDUBLE from './components/BarChartARDUBLE';
 import BarChartKRDUBLE from './components/BarChartKRDUBLE';
 import BarChartENEN from './components/BarChartENEN';
 import DetailsPageARAR from './components/DetailsPageARAR';
+import DetailsPageARKR from './components/DetailsPageARKR';
 import Button from '@mui/material/Button';
 
 function App() {
@@ -152,6 +153,15 @@ function App() {
                       <div className="chart-wrapper">
                         {chartDataARKR.length > 0 && <BarChartARKR data={chartDataARKR} />}
                       </div>
+                      <Button 
+                        component={Link} 
+                        to="/details/arkr" 
+                        variant="outlined" 
+                        size="small"
+                        sx={{ mt: 2 }}
+                      >
+                        Подробнее
+                      </Button>
                     </div>
 
                     <div className="chart-card">
@@ -197,6 +207,7 @@ function App() {
 
         {/* СТРАНИЦА ПОДРОБНОСТЕЙ */}
         <Route path="/details/arar" element={<DetailsPageARAR />} />
+        <Route path="/details/arkr" element={<DetailsPageARKR />} />
       </Routes>
     </div>
   );

@@ -31,7 +31,7 @@ async function getEntries() {
   return rows;
 }
 
-async function getEntriesUpdates() {
+async function getEntriesUpdatesArKr() {
   const sql = `
     SELECT
       "UpdateDate",
@@ -47,7 +47,57 @@ async function getEntriesUpdates() {
   return rows.reverse();
 }
 
-async function getEntriesUpdatesARAR() {
+async function getArKrDetails() {
+  const sql = `
+    WITH LatestData AS (
+      SELECT DISTINCT ON (e."ID") 
+        e."ID",
+        e."Name",
+        -- 1. Извлекаем АР-часть (между _АР-КР_ и _VS_)
+        REPLACE(REPLACE(REPLACE(TRIM(
+          SUBSTRING(
+            e."Name" FROM 
+            STRPOS(e."Name", '_АР-КР_') + 7 FOR 
+            (STRPOS(e."Name", '_VS_') - (STRPOS(e."Name", '_АР-КР_') + 7))
+          )
+        ), 'АР_', ''), 'АР-', ''), 'АР ', '') AS "PrimaryElement",
+        
+        -- 2. Извлекаем КР-часть (после _VS_)
+        REPLACE(REPLACE(REPLACE(TRIM(
+          SUBSTRING(e."Name" FROM STRPOS(e."Name", '_VS_') + 4)
+        ), 'КР_', ''), 'КР-', ''), 'КР ', '') AS "CategoryElement",
+        
+        eu."CollisionsAmount"
+      FROM "Entries" e
+      JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
+      WHERE e."Name" LIKE '%_АР-КР_%'
+      ORDER BY e."ID", eu."UpdateDate" DESC
+    ),
+    MergedData AS (
+      SELECT 
+        "PrimaryElement",
+        "CategoryElement",
+        SUM("CollisionsAmount") as "TotalAmount"
+      FROM LatestData
+      GROUP BY "PrimaryElement", "CategoryElement"
+    )
+    SELECT 
+      "PrimaryElement",
+      SUM("TotalAmount") as "GroupTotal",
+      json_agg(json_build_object(
+        'primary_part', "PrimaryElement",
+        'category_part', "CategoryElement",
+        'amount', "TotalAmount"
+      ) ORDER BY "TotalAmount" DESC) as "Details"
+    FROM MergedData
+    GROUP BY "PrimaryElement"
+    ORDER BY "GroupTotal" DESC;
+  `;
+  const { rows } = await currentPool.query(sql);
+  return rows;
+}
+
+async function getEntriesUpdatesArAr() {
   const sql = `
     SELECT
       "UpdateDate",
@@ -117,7 +167,7 @@ async function getArArDetails() {
   return rows;
 }
 
-async function getEntriesUpdatesARTH() {
+async function getEntriesUpdatesArTh() {
   const sql = `
     SELECT
       "UpdateDate",
@@ -133,7 +183,7 @@ async function getEntriesUpdatesARTH() {
   return rows.reverse();
 }
 
-async function getEntriesUpdatesKRKR() {
+async function getEntriesUpdatesKrKr() {
   const sql = `
     SELECT
       "UpdateDate",
@@ -149,7 +199,7 @@ async function getEntriesUpdatesKRKR() {
   return rows.reverse();
 }
 
-async function getEntriesUpdatesKRTH() {
+async function getEntriesUpdatesKrTh() {
   const sql = `
     SELECT
       "UpdateDate",
@@ -165,7 +215,7 @@ async function getEntriesUpdatesKRTH() {
   return rows.reverse();
 }
 
-async function getEntriesUpdatesTHTH() {
+async function getEntriesUpdatesThTh() {
   const sql = `
     SELECT
       "UpdateDate",
@@ -181,7 +231,7 @@ async function getEntriesUpdatesTHTH() {
   return rows.reverse();
 }
 
-async function getEntriesUpdatesAREN() {
+async function getEntriesUpdatesArEn() {
   const sql = `
     SELECT
       eu."UpdateDate" AS "UpdateDate",
@@ -204,7 +254,7 @@ async function getEntriesUpdatesAREN() {
   return rows.reverse();
 }
 
-async function getEntriesUpdatesKREN() {
+async function getEntriesUpdatesKrEn() {
   const sql = `
     SELECT
       eu."UpdateDate" AS "UpdateDate",
@@ -227,7 +277,7 @@ async function getEntriesUpdatesKREN() {
   return rows.reverse();
 }
 
-async function getEntriesUpdatesTHEN() {
+async function getEntriesUpdatesThEn() {
   const sql = `
     SELECT
       eu."UpdateDate" AS "UpdateDate",
@@ -250,7 +300,7 @@ async function getEntriesUpdatesTHEN() {
   return rows.reverse();
 }
 
-async function getEntriesUpdatesARDUBLE() {
+async function getEntriesUpdatesArDuble() {
   const sql = `
     SELECT
       eu."UpdateDate" AS "UpdateDate",
@@ -266,7 +316,7 @@ async function getEntriesUpdatesARDUBLE() {
   return rows.reverse();
 }
 
-async function getEntriesUpdatesKRDUBLE() {
+async function getEntriesUpdatesKrDuble() {
   const sql = `
     SELECT
       eu."UpdateDate" AS "UpdateDate",
@@ -282,7 +332,7 @@ async function getEntriesUpdatesKRDUBLE() {
   return rows.reverse();
 }
 
-async function getEntriesUpdatesENEN() {
+async function getEntriesUpdatesEnEn() {
   const sql = `
     SELECT
       eu."UpdateDate" AS "UpdateDate",
@@ -342,17 +392,18 @@ module.exports = {
   DB_CONFIGS,
   setDb,
   getEntries,
-  getEntriesUpdates,
-  getEntriesUpdatesARAR,
-  getEntriesUpdatesARTH,
-  getEntriesUpdatesKRKR,
-  getEntriesUpdatesKRTH,
-  getEntriesUpdatesTHTH,
-  getEntriesUpdatesAREN,
-  getEntriesUpdatesKREN,
-  getEntriesUpdatesTHEN,
-  getEntriesUpdatesARDUBLE,
-  getEntriesUpdatesKRDUBLE,
-  getEntriesUpdatesENEN,
+  getEntriesUpdatesArKr,
+  getEntriesUpdatesArAr,
+  getEntriesUpdatesArTh,
+  getEntriesUpdatesKrKr,
+  getEntriesUpdatesKrTh,
+  getEntriesUpdatesThTh,
+  getEntriesUpdatesArEn,
+  getEntriesUpdatesKrEn,
+  getEntriesUpdatesThEn,
+  getEntriesUpdatesArDuble,
+  getEntriesUpdatesKrDuble,
+  getEntriesUpdatesEnEn,
   getArArDetails,
+  getArKrDetails,
 };

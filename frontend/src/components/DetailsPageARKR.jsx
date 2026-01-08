@@ -8,7 +8,7 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import { useNavigate } from 'react-router-dom';
 import DbSelector from './DbSelector'; // Импорт компонента выбора БД
-
+ 
 const getPluralCategory = (count) => {
   const lastDigit = count % 10;
   const lastTwoDigits = count % 100;
@@ -17,7 +17,7 @@ const getPluralCategory = (count) => {
   if (lastDigit >= 2 && lastDigit <= 4) return 'категории';
   return 'категорий';
 };
-
+ 
 function Row({ row, isOpen, onToggle }) {
   const detailsCount = row.Details ? row.Details.length : 0;
   const isSingle = detailsCount === 1;
@@ -36,13 +36,28 @@ function Row({ row, isOpen, onToggle }) {
             </IconButton>
           )}
         </TableCell>
-        <TableCell width="35%" className="font-weight-600">{row.PrimaryElement}</TableCell>
-        <TableCell width="45%">
-          {isSingle ? singleDetail.category_part : (!isOpen ? `${detailsCount} ${getPluralCategory(detailsCount)}` : "")}
+        
+        {/* Столбец АР */}
+        <TableCell width="35%" className="font-weight-600">
+          {row.PrimaryElement}
         </TableCell>
-        <TableCell width="15%" align="right" className="font-weight-700">{row.GroupTotal}</TableCell>
+        
+        {/* Столбец КР (или количество категорий) */}
+        <TableCell width="45%">
+          {isSingle ? (
+            singleDetail.category_part
+          ) : (
+            !isOpen ? `${detailsCount} ${getPluralCategory(detailsCount)}` : ""
+          )}
+        </TableCell>
+        
+        {/* Сумма коллизий */}
+        <TableCell width="15%" align="right" className="font-weight-700">
+          {row.GroupTotal}
+        </TableCell>
       </TableRow>
 
+      {/* Вложенная таблица деталей */}
       {!isSingle && (
         <TableRow>
           <TableCell colSpan={4} sx={{ py: 0, px: 0 }}> 
@@ -53,9 +68,15 @@ function Row({ row, isOpen, onToggle }) {
                     {row.Details.map((detail, idx) => (
                       <TableRow key={idx} className="inner-detail-row">
                         <TableCell width="50px" sx={{ border: 'none' }} />
-                        <TableCell width="35%" sx={{ border: 'none' }}>{detail.primary_part}</TableCell>
-                        <TableCell width="45%" sx={{ border: 'none' }}>{detail.category_part}</TableCell>
-                        <TableCell width="15%" align="right" sx={{ border: 'none', pr: 4 }}>{detail.amount}</TableCell>
+                        <TableCell width="35%" sx={{ border: 'none' }}>
+                          {detail.primary_part}
+                        </TableCell>
+                        <TableCell width="45%" sx={{ border: 'none' }}>
+                          {detail.category_part}
+                        </TableCell>
+                        <TableCell width="15%" align="right" sx={{ border: 'none', pr: 4 }}>
+                          {detail.amount}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -69,23 +90,23 @@ function Row({ row, isOpen, onToggle }) {
   );
 }
 
-const DetailsPageARAR = () => {
+const DetailsPageARKR = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({}); 
   const navigate = useNavigate();
 
-  // Основная функция загрузки данных
+  // Функция загрузки данных именно для раздела АР-КР
   const loadData = () => {
     setLoading(true);
-    fetch('/api/details/arar')
+    fetch('/api/details/arkr') // Вызов эндпоинта для АР-КР
       .then(res => res.json())
       .then(json => {
         setData(json);
         setLoading(false);
       })
       .catch(err => {
-        console.error("Ошибка загрузки:", err);
+        console.error("Ошибка загрузки АР-КР:", err);
         setLoading(false);
       });
   };
@@ -102,8 +123,8 @@ const DetailsPageARAR = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dbName }),
       });
-      setOpenRows({}); // Закрываем все раскрытые строки
-      loadData();      // Перезагружаем данные для новой БД
+      setOpenRows({}); 
+      loadData();      
     } catch (err) {
       console.error("Ошибка при смене БД:", err);
     }
@@ -113,32 +134,42 @@ const DetailsPageARAR = () => {
 
   return (
     <div className="details-page-container">
-      {/* Верхняя панель: Кнопки навигации слева, Селектор БД справа */}
+      {/* Панель управления */}
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button onClick={() => navigate(-1)} variant="outlined" className="back-button">← Назад</Button>
+          <Button onClick={() => navigate(-1)} variant="outlined" className="back-button">
+            ← Назад
+          </Button>
           {Object.values(openRows).some(v => v) && (
-            <Button onClick={() => setOpenRows({})} variant="outlined" className="back-button" startIcon={<UnfoldLessIcon />}>
+            <Button 
+              onClick={() => setOpenRows({})} 
+              variant="outlined" 
+              className="back-button" 
+              startIcon={<UnfoldLessIcon />}
+            >
               Свернуть всё
             </Button>
           )}
         </Box>
         
-        {/* Компонент выбора базы данных */}
         <DbSelector onSelect={handleDbChange} />
       </Box>
 
-      <Typography variant="h4" className="details-title">Детализация коллизий: АР-АР</Typography>
+      <Typography variant="h4" className="details-title">
+        Детализация коллизий: АР-КР
+      </Typography>
       
       {loading ? (
-        <Box sx={{ p: 8, textAlign: 'center' }}><Typography variant="h6">Обновление данных...</Typography></Box>
+        <Box sx={{ p: 8, textAlign: 'center' }}>
+          <Typography variant="h6" color="textSecondary">Загрузка данных АР-КР...</Typography>
+        </Box>
       ) : (
         <TableContainer component={Paper} elevation={3} sx={{ borderRadius: '12px', overflow: 'hidden' }}>
           <Table sx={{ tableLayout: 'fixed' }}>
             <TableHead className="table-header-dark">
               <TableRow>
                 <TableCell width="50px" />
-                <TableCell width="35%">Основной элемент</TableCell>
+                <TableCell width="35%">Основной элементР</TableCell>
                 <TableCell width="45%">Проверка с категорией</TableCell>
                 <TableCell width="15%" align="right">Сумма коллизий</TableCell>
               </TableRow>
@@ -149,7 +180,10 @@ const DetailsPageARAR = () => {
                   key={row.PrimaryElement} 
                   row={row} 
                   isOpen={!!openRows[row.PrimaryElement]}
-                  onToggle={() => setOpenRows(prev => ({ ...prev, [row.PrimaryElement]: !prev[row.PrimaryElement] }))}
+                  onToggle={() => setOpenRows(prev => ({ 
+                    ...prev, 
+                    [row.PrimaryElement]: !prev[row.PrimaryElement] 
+                  }))}
                 />
               ))}
             </TableBody>
@@ -171,4 +205,4 @@ const DetailsPageARAR = () => {
   );
 };
 
-export default DetailsPageARAR;
+export default DetailsPageARKR;

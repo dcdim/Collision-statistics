@@ -252,6 +252,59 @@ async function getEntriesUpdatesKrKr() {
   return rows.reverse();
 }
 
+async function getKrKrDetails() {
+  const sql = `
+    WITH LatestData AS (
+      -- 1. Получаем последние данные по каждому ID
+      SELECT DISTINCT ON (e."ID") 
+        e."ID",
+        e."Name",
+        -- Очистка первого элемента КР (между _КР-КР_ и _VS_)
+        REPLACE(REPLACE(REPLACE(TRIM(
+          SUBSTRING(
+            e."Name" FROM 
+            STRPOS(e."Name", '_КР-КР_') + 7 FOR 
+            (STRPOS(e."Name", '_VS_') - (STRPOS(e."Name", '_КР-КР_') + 7))
+          )
+        ), 'КР_', ''), 'КР-', ''), 'КР ', '') AS "PrimaryElement",
+        
+        -- Очистка второго элемента КР (после _VS_)
+        REPLACE(REPLACE(REPLACE(TRIM(
+          SUBSTRING(e."Name" FROM STRPOS(e."Name", '_VS_') + 4)
+        ), 'КР_', ''), 'КР-', ''), 'КР ', '') AS "CategoryElement",
+        
+        eu."CollisionsAmount"
+      FROM "Entries" e
+      JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
+      WHERE e."Name" LIKE '%_КР-КР_%'
+      ORDER BY e."ID", eu."UpdateDate" DESC
+    ),
+    MergedData AS (
+      -- 2. Группируем очищенные данные
+      SELECT 
+        "PrimaryElement",
+        "CategoryElement",
+        SUM("CollisionsAmount") as "TotalAmount"
+      FROM LatestData
+      GROUP BY "PrimaryElement", "CategoryElement"
+    )
+    -- 3. Агрегация в JSON для интерфейса
+    SELECT 
+      "PrimaryElement",
+      SUM("TotalAmount") as "GroupTotal",
+      json_agg(json_build_object(
+        'primary_part', "PrimaryElement",
+        'category_part', "CategoryElement",
+        'amount', "TotalAmount"
+      ) ORDER BY "TotalAmount" DESC) as "Details"
+    FROM MergedData
+    GROUP BY "PrimaryElement"
+    ORDER BY "GroupTotal" DESC;
+  `;
+  const { rows } = await currentPool.query(sql);
+  return rows;
+}
+
 async function getEntriesUpdatesKrTh() {
   const sql = `
     SELECT
@@ -460,4 +513,5 @@ module.exports = {
   getArArDetails,
   getArKrDetails,
   getArThDetails,
+  getKrKrDetails,
 };

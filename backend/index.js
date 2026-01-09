@@ -174,6 +174,16 @@ app.get('/api/details/arth', async (req, res) => {
   }
 });
 
+app.get('/api/details/krkr', async (req, res) => {
+  try {
+    const details = await db.getKrKrDetails();
+    res.json(details);
+  } catch (err) {
+    console.error('Ошибка при получении деталей КР-КР:', err);
+    res.status(500).json({ error: 'Ошибка сервера при загрузке данных КР-КР' });
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server listening on port ${PORT}`);
 });

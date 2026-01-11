@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { 
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
   TableFooter, Paper, Typography, Button, Box, Collapse, IconButton, Chip, CircularProgress 
@@ -9,7 +9,7 @@ import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import { useNavigate } from 'react-router-dom';
 import DbSelector from './DbSelector';
 
-// Цветовая палитра для систем
+// Цветовая палитра для инженерных систем
 const systemPalette = {
   'ОВ': '#2196f3', 'ОТ': '#f44336', 'ТС': '#ff9800', 'ХС': '#00bcd4',
   'ИТП': '#673ab7', 'ВК': '#4caf50', 'В': '#8bc34a', 'К': '#795548',
@@ -17,7 +17,7 @@ const systemPalette = {
   'АК': '#607d8b', 'ГПТ': '#3f51b5'
 };
 
-// Хелпер для склонения слова "система"
+// Склонение "система"
 const getPluralSystems = (count) => {
   const lastDigit = count % 10;
   const lastTwoDigits = count % 100;
@@ -27,7 +27,7 @@ const getPluralSystems = (count) => {
   return 'систем';
 };
 
-// Хелпер для склонения слова "категория"
+// Склонение "категория"
 const getPluralCategory = (count) => {
   const lastDigit = count % 10;
   const lastTwoDigits = count % 100;
@@ -38,14 +38,13 @@ const getPluralCategory = (count) => {
 };
 
 function Row({ row, isOpen, onToggle }) {
-  // 1. Сортировка деталей по системам (по алфавиту)
-  const sortedDetails = React.useMemo(() => {
+  // Сортировка по системам (алфавит)
+  const sortedDetails = useMemo(() => {
     return row.Details ? [...row.Details].sort((a, b) => 
       a.system_type.localeCompare(b.system_type)
     ) : [];
   }, [row.Details]);
 
-  // 2. Расчет уникальных систем и общего кол-ва категорий
   const uniqueSystemsCount = new Set(sortedDetails.map(d => d.system_type)).size;
   const totalCategoriesCount = sortedDetails.length;
   const isSingle = totalCategoriesCount === 1;
@@ -55,9 +54,8 @@ function Row({ row, isOpen, onToggle }) {
       <TableRow 
         className={isSingle ? 'static-row' : `collapsible-row ${isOpen ? 'row-active' : ''}`}
         onClick={!isSingle ? onToggle : undefined}
-        sx={{ cursor: isSingle ? 'default' : 'pointer' }}
       >
-        <TableCell width="50px">
+        <TableCell width="60px">
           {!isSingle && (
             <IconButton size="small" color={isOpen ? "primary" : "default"}>
               {isOpen ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
@@ -65,12 +63,12 @@ function Row({ row, isOpen, onToggle }) {
           )}
         </TableCell>
         
-        {/* Столбец КР */}
+        {/* Столбец 2: Основной элемент (КР) */}
         <TableCell width="35%" className="font-weight-600">
           {row.PrimaryElement}
         </TableCell>
         
-        {/* Столбец Системы и элементы ИС (свернутое состояние) */}
+        {/* Столбец 3: Системы и категории) */}
         <TableCell width="45%">
           {isSingle ? (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -78,45 +76,44 @@ function Row({ row, isOpen, onToggle }) {
                 label={sortedDetails[0].system_type} 
                 size="small" 
                 sx={{ 
-                  bgcolor: systemPalette[sortedDetails[0].system_type], 
+                  bgcolor: systemPalette[sortedDetails[0].system_type] || '#9e9e9e', 
                   color: 'white', 
                   fontWeight: 'bold', 
-                  fontSize: '0.7rem', 
-                  height: '20px' 
+                  fontSize: '0.7rem' 
                 }} 
               />
               {sortedDetails[0].category_part}
             </Box>
           ) : (
-            !isOpen ? (
-              <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 500 }}>
+            !isOpen && (
+              <Typography variant="body2">
                 {`${uniqueSystemsCount} ${getPluralSystems(uniqueSystemsCount)} `}
-                <span style={{ color: '#9e9e9e', fontWeight: 400 }}>
+                <span style={{ color: '#94a3b8', fontWeight: 400, marginLeft: '4px' }}>
                   {`(${totalCategoriesCount} ${getPluralCategory(totalCategoriesCount)})`}
                 </span>
               </Typography>
-            ) : null
+            )
           )}
         </TableCell>
         
-        {/* Сумма коллизий */}
+        {/* Столбец 4: Сумма коллизий */}
         <TableCell width="15%" align="right" className="font-weight-700">
           {row.GroupTotal}
         </TableCell>
       </TableRow>
 
-      {/* Вложенная таблица (Развернутое состояние) */}
+      {/* Выпадающий список деталей */}
       {!isSingle && (
         <TableRow>
           <TableCell colSpan={4} sx={{ py: 0, px: 0 }}>
             <Collapse in={isOpen} timeout="auto" unmountOnExit>
-              <Box className="details-expanded-box-active" sx={{ bgcolor: '#f8f9fa' }}>
+              <Box className="details-expanded-box-active">
                 <Table size="small" sx={{ tableLayout: 'fixed' }}>
                   <TableBody>
                     {sortedDetails.map((detail, idx) => (
                       <TableRow key={idx} className="inner-detail-row">
-                        <TableCell width="50px" sx={{ border: 'none' }} />
-                        <TableCell width="35%" sx={{ border: 'none', color: 'text.secondary', fontSize: '0.85rem' }}>
+                        <TableCell width="60px" sx={{ border: 'none' }} />
+                        <TableCell width="35%" sx={{ border: 'none' }}>
                           {detail.primary_part}
                         </TableCell>
                         <TableCell width="45%" sx={{ border: 'none' }}>
@@ -167,14 +164,12 @@ const DetailsPageKREN = () => {
         setLoading(false);
       })
       .catch(err => {
-        console.error("Ошибка загрузки АR-EN:", err);
+        console.error("Ошибка загрузки:", err);
         setLoading(false);
       });
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   const handleDbChange = async (dbName) => {
     try {
@@ -185,25 +180,24 @@ const DetailsPageKREN = () => {
       });
       setOpenRows({});
       loadData();
-    } catch (err) {
-      console.error("Ошибка при смене БД:", err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const grandTotal = data.reduce((sum, row) => sum + Number(row.GroupTotal), 0);
 
   return (
     <div className="details-page-container">
+      {/* Шапка и кнопки управления */}
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button onClick={() => navigate(-1)} variant="outlined" className="back-button">
+          <Button onClick={() => navigate(-1)} className="back-button">
             ← Назад
           </Button>
           {Object.values(openRows).some(v => v) && (
             <Button 
               onClick={() => setOpenRows({})} 
               variant="outlined" 
-              className="back-button" 
+              className="back-button"
               startIcon={<UnfoldLessIcon />}
             >
               Свернуть всё
@@ -214,23 +208,23 @@ const DetailsPageKREN = () => {
       </Box>
 
       <Typography variant="h4" className="details-title">
-        Детализация коллизий: КР — Инженерные системы
+        КР — Инженерные системы
       </Typography>
 
       {loading ? (
-        <Box sx={{ p: 8, textAlign: 'center' }}>
-          <CircularProgress size={40} sx={{ mb: 2 }} />
-          <Typography variant="h6" color="textSecondary">Загрузка данных...</Typography>
+        <Box sx={{ p: 10, textAlign: 'center' }}>
+          <CircularProgress size={45} />
+          <Typography sx={{ mt: 2, color: 'text.secondary' }}>Загрузка инженерных данных...</Typography>
         </Box>
       ) : (
         <TableContainer component={Paper} elevation={3} sx={{ borderRadius: '12px', overflow: 'hidden' }}>
           <Table sx={{ tableLayout: 'fixed' }}>
-            <TableHead className="table-header-dark" sx={{ bgcolor: '#34495e' }}>
+            <TableHead className="table-header-dark">
               <TableRow>
-                <TableCell width="50px" />
-                <TableCell width="35%" sx={{ color: 'white' }}>Основной элемент</TableCell>
-                <TableCell width="45%" sx={{ color: 'white' }}>Проверка с категорией ИС</TableCell>
-                <TableCell width="15%" align="right" sx={{ color: 'white' }}>Сумма коллизий</TableCell>
+                <TableCell width="60px" />
+                <TableCell width="35%">Основной элемент</TableCell>
+                <TableCell width="45%">Проверка с категорией ИС</TableCell>
+                <TableCell width="15%" align="right">Коллизии</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -247,13 +241,15 @@ const DetailsPageKREN = () => {
               ))}
             </TableBody>
             <TableFooter className="table-footer-summary">
-              <TableRow sx={{ bgcolor: '#f8f9fa' }}>
-                <TableCell width="50px" />
+              <TableRow>
+                <TableCell width="60px" />
                 <TableCell colSpan={2} align="right" sx={{ pr: 2 }}>
                   <Typography className="total-label" variant="h6">ИТОГО:</Typography>
                 </TableCell>
                 <TableCell align="right">
-                  <Typography className="total-value" variant="h6">{grandTotal}</Typography>
+                  <Typography className="total-value" variant="h6">
+                    {grandTotal}
+                  </Typography>
                 </TableCell>
               </TableRow>
             </TableFooter>

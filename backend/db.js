@@ -652,6 +652,76 @@ async function getEntriesUpdatesThEn() {
   return rows.reverse();
 }
 
+async function getThEnDetails() {
+  const sql = `
+    WITH LatestData AS (
+      -- 1. Получаем последние данные и определяем код системы
+      SELECT DISTINCT ON (e."ID") 
+        e."ID",
+        e."Name",
+        -- Список систем:
+        (REGEXP_MATCH(e."Name", '_ТХ-(ОВ|ОТ|ТС|ХС|ИТП|ВК|В|К|ПТ|ЭМ|СС|СПЗ|АК|ГПТ)_'))[1] AS "SystemType",
+        
+        -- Позиция начала системного маркера
+        STRPOS(e."Name", '_ТХ-') AS "MarkerPos",
+
+        -- Извлечение правой части (после _VS_)
+        TRIM(SUBSTRING(e."Name" FROM STRPOS(e."Name", '_VS_') + 4)) AS "RawSystemElement",
+        
+        eu."CollisionsAmount"
+      FROM "Entries" e
+      JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
+      -- Фильтр: ищем любой из 14 разделов
+      WHERE e."Name" ~ '_ТХ-(ОВ|ОТ|ТС|ХС|ИТП|ВК|В|К|ПТ|ЭМ|СС|СПЗ|АК|ГПТ)_'
+      ORDER BY e."ID", eu."UpdateDate" DESC
+    ),
+    ProcessedData AS (
+      -- 2. Глубокая очистка имен
+      SELECT 
+        "SystemType",
+        -- Очистка ТХ-части (левая сторона)
+        REPLACE(REPLACE(REPLACE(TRIM(
+          SUBSTRING(
+            "Name" FROM "MarkerPos" + (LENGTH("SystemType") + 5) 
+            FOR (STRPOS("Name", '_VS_') - ("MarkerPos" + (LENGTH("SystemType") + 5)))
+          )
+        ), 'ТХ_', ''), 'ТХ-', ''), 'ТХ ', '') AS "PrimaryElement",
+        
+        -- Очистка системной части (правая сторона): удаляем СС_, СС- или СС 
+        REGEXP_REPLACE("RawSystemElement", '^(' || "SystemType" || ')(_|\\-| )', '', 'i') AS "CategoryElement",
+        
+        "CollisionsAmount"
+      FROM LatestData
+      WHERE "SystemType" IS NOT NULL
+    ),
+    MergedData AS (
+      -- 3. Группировка данных
+      SELECT 
+        "PrimaryElement",
+        "CategoryElement",
+        "SystemType",
+        SUM("CollisionsAmount") as "TotalAmount"
+      FROM ProcessedData
+      GROUP BY "PrimaryElement", "CategoryElement", "SystemType"
+    )
+    -- 4. Сборка JSON
+    SELECT 
+      "PrimaryElement",
+      SUM("TotalAmount") as "GroupTotal",
+      json_agg(json_build_object(
+        'system_type', "SystemType",
+        'primary_part', "PrimaryElement",
+        'category_part', "CategoryElement",
+        'amount', "TotalAmount"
+      ) ORDER BY "TotalAmount" DESC) as "Details"
+    FROM MergedData
+    GROUP BY "PrimaryElement"
+    ORDER BY "GroupTotal" DESC;
+  `;
+  const { rows } = await currentPool.query(sql);
+  return rows;
+}
+
 async function getEntriesUpdatesArDuble() {
   const sql = `
     SELECT
@@ -764,4 +834,5 @@ module.exports = {
   getThThDetails,
   getArEnDetails,
   getKrEnDetails,
+  getThEnDetails,
 };

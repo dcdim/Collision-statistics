@@ -224,6 +224,16 @@ app.get('/api/details/kren', async (req, res) => {
   }
 });
 
+app.get('/api/details/then', async (req, res) => {
+  try {
+    const details = await db.getThEnDetails();
+    res.json(details || []); 
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Ошибка базы данных', message: err.message });
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server listening on port ${PORT}`);
 });

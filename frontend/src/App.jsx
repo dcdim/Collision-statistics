@@ -23,6 +23,7 @@ import DetailsPageKRTH from './components/DetailsPageKRTH';
 import DetailsPageTHTH from './components/DetailsPageTHTH';
 import DetailsPageAREN from './components/DetailsPageAREN';
 import DetailsPageKREN from './components/DetailsPageKREN';
+import DetailsPageTHEN from './components/DetailsPageTHEN';
 import Button from '@mui/material/Button';
 
 function App() {
@@ -165,10 +166,19 @@ function App() {
                     </div>
 
                     <div className="chart-card">
-                      <h2>ИС-ТХ</h2>
+                      <h2>ТХ-ИС</h2>
                       <div className="chart-wrapper">
                         {chartDataTHEN.length > 0 && <BarChartTHEN data={chartDataTHEN} />}
                       </div>
+                      <Button 
+                        component={Link} 
+                        to="/details/then" 
+                        variant="outlined" 
+                        size="small"
+                        sx={{ mt: 2 }}
+                      >
+                        Подробнее
+                      </Button>
                     </div>
 
                     <div className="chart-card">
@@ -274,6 +284,7 @@ function App() {
         <Route path="/details/thth" element={<DetailsPageTHTH />} />
         <Route path="/details/aren" element={<DetailsPageAREN />} />
         <Route path="/details/kren" element={<DetailsPageKREN />} />
+        <Route path="/details/then" element={<DetailsPageTHEN />} />
       </Routes>
     </div>
   );

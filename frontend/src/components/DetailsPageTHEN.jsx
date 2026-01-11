@@ -63,7 +63,7 @@ function Row({ row, isOpen, onToggle }) {
           )}
         </TableCell>
         
-        {/* Столбец 2: Основной элемент (АР) */}
+        {/* Столбец 2: Основной элемент (ТХ) */}
         <TableCell width="35%" className="font-weight-600">
           {row.PrimaryElement}
         </TableCell>
@@ -149,7 +149,7 @@ function Row({ row, isOpen, onToggle }) {
   );
 }
 
-const DetailsPageAREN = () => {
+const DetailsPageTHEN = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({});
@@ -157,7 +157,7 @@ const DetailsPageAREN = () => {
 
   const loadData = () => {
     setLoading(true);
-    fetch('/api/details/aren')
+    fetch('/api/details/then')
       .then(res => res.json())
       .then(json => {
         setData(Array.isArray(json) ? json : []);
@@ -208,7 +208,7 @@ const DetailsPageAREN = () => {
       </Box>
 
       <Typography variant="h4" className="details-title">
-        АР — Инженерные системы
+        ТХ — Инженерные системы
       </Typography>
 
       {loading ? (
@@ -260,4 +260,4 @@ const DetailsPageAREN = () => {
   );
 };
 
-export default DetailsPageAREN;
+export default DetailsPageTHEN;

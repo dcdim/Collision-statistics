@@ -19,7 +19,7 @@ function BarChartTHEN({ data }) {
     labels,
     datasets: [
       {
-        label: 'Сумма коллизий ИС-ТХ',
+        label: 'Сумма коллизий ТХ-ИС',
         data: collisionsData,
         backgroundColor: 'rgba(255, 159, 64, 0.7)',
       },

@@ -22,6 +22,7 @@ import DetailsPageKRKR from './components/DetailsPageKRKR';
 import DetailsPageKRTH from './components/DetailsPageKRTH';
 import DetailsPageTHTH from './components/DetailsPageTHTH';
 import DetailsPageAREN from './components/DetailsPageAREN';
+import DetailsPageKREN from './components/DetailsPageKREN';
 import Button from '@mui/material/Button';
 
 function App() {
@@ -152,6 +153,15 @@ function App() {
                       <div className="chart-wrapper">
                         {chartDataKREN.length > 0 && <BarChartKREN data={chartDataKREN} />}
                       </div>
+                      <Button 
+                        component={Link} 
+                        to="/details/kren" 
+                        variant="outlined" 
+                        size="small"
+                        sx={{ mt: 2 }}
+                      >
+                        Подробнее
+                      </Button>
                     </div>
 
                     <div className="chart-card">
@@ -263,6 +273,7 @@ function App() {
         <Route path="/details/krth" element={<DetailsPageKRTH />} />
         <Route path="/details/thth" element={<DetailsPageTHTH />} />
         <Route path="/details/aren" element={<DetailsPageAREN />} />
+        <Route path="/details/kren" element={<DetailsPageKREN />} />
       </Routes>
     </div>
   );

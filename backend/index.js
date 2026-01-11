@@ -204,25 +204,22 @@ app.get('/api/details/thth', async (req, res) => {
   }
 });
 
-// app.get('/api/details/aren', async (req, res) => {
-//   try {
-//     const details = await db.getArEnDetails();
-//     res.json(details);
-//   } catch (err) {
-//     console.error('Ошибка АР-ИС:', err);
-//     res.status(500).json({ error: 'Ошибка сервера' });
-//   }
-// });
-
 app.get('/api/details/aren', async (req, res) => {
   try {
     const details = await db.getArEnDetails();
-    // Убедитесь, что db.getArEnDetails всегда возвращает массив (rows)
     res.json(details || []); 
   } catch (err) {
     console.error(err);
-    // Если ошибка, отправляем статус 500 и объект ошибки
-    // Фронтенд теперь это обработает через .catch
+    res.status(500).json({ error: 'Ошибка базы данных', message: err.message });
+  }
+});
+
+app.get('/api/details/kren', async (req, res) => {
+  try {
+    const details = await db.getKrEnDetails();
+    res.json(details || []); 
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Ошибка базы данных', message: err.message });
   }
 });

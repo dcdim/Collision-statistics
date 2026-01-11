@@ -19,6 +19,9 @@ import DetailsPageARAR from './components/DetailsPageARAR';
 import DetailsPageARKR from './components/DetailsPageARKR';
 import DetailsPageARTH from './components/DetailsPageARTH';
 import DetailsPageKRKR from './components/DetailsPageKRKR';
+import DetailsPageKRTH from './components/DetailsPageKRTH';
+import DetailsPageTHTH from './components/DetailsPageTHTH';
+import DetailsPageAREN from './components/DetailsPageAREN';
 import Button from '@mui/material/Button';
 
 function App() {
@@ -189,6 +192,15 @@ function App() {
                       <div className="chart-wrapper">
                         {chartDataAREN.length > 0 && <BarChartAREN data={chartDataAREN} />}
                       </div>
+                      <Button 
+                        component={Link} 
+                        to="/details/aren" 
+                        variant="outlined" 
+                        size="small"
+                        sx={{ mt: 2 }}
+                      >
+                        Подробнее
+                      </Button>
                     </div>
 
                     <div className="chart-card">
@@ -196,6 +208,15 @@ function App() {
                       <div className="chart-wrapper">
                         {chartDataKRTH.length > 0 && <BarChartKRTH data={chartDataKRTH} />}
                       </div>
+                      <Button 
+                        component={Link} 
+                        to="/details/krth" 
+                        variant="outlined" 
+                        size="small"
+                        sx={{ mt: 2 }}
+                      >
+                        Подробнее
+                      </Button>
                     </div>
 
                     <div className="chart-card">
@@ -210,6 +231,15 @@ function App() {
                       <div className="chart-wrapper">
                         {chartDataTHTH.length > 0 && <BarChartTHTH data={chartDataTHTH} />}
                       </div>
+                      <Button 
+                        component={Link} 
+                        to="/details/thth" 
+                        variant="outlined" 
+                        size="small"
+                        sx={{ mt: 2 }}
+                      >
+                        Подробнее
+                      </Button>
                     </div>
 
                     <div className="chart-card">
@@ -230,6 +260,9 @@ function App() {
         <Route path="/details/arkr" element={<DetailsPageARKR />} />
         <Route path="/details/arth" element={<DetailsPageARTH />} />
         <Route path="/details/krkr" element={<DetailsPageKRKR />} />
+        <Route path="/details/krth" element={<DetailsPageKRTH />} />
+        <Route path="/details/thth" element={<DetailsPageTHTH />} />
+        <Route path="/details/aren" element={<DetailsPageAREN />} />
       </Routes>
     </div>
   );

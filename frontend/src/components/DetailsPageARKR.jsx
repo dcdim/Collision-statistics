@@ -170,7 +170,7 @@ const DetailsPageARKR = () => {
               <TableRow>
                 <TableCell width="50px" />
                 <TableCell width="35%">Основной элемент</TableCell>
-                <TableCell width="45%">Проверка с категорией</TableCell>
+                <TableCell width="45%">Пересечения с категорией</TableCell>
                 <TableCell width="15%" align="right">Сумма коллизий</TableCell>
               </TableRow>
             </TableHead>

@@ -762,52 +762,80 @@ async function getEntriesUpdatesEnEn() {
     FROM "EntriesUpdates" eu
     JOIN "Entries" e ON eu."EntryId" = e."ID"
     WHERE
-      e."Name" LIKE '%ОВ-ОВ%' OR e."Name" LIKE '%ОВ-ОТ%' OR e."Name" LIKE '%ОВ-ТС%' OR
-      e."Name" LIKE '%ОВ-ХС%' OR e."Name" LIKE '%ОВ-ИТП%' OR e."Name" LIKE '%ОВ-ВК%' OR
-      e."Name" LIKE '%ОВ-В%'  OR e."Name" LIKE '%ОВ-К%'   OR e."Name" LIKE '%ОВ-ПТ%' OR
-      e."Name" LIKE '%ОВ-ЭМ%' OR e."Name" LIKE '%ОВ-СС%' OR e."Name" LIKE '%ОВ-СПЗ%' OR
-      e."Name" LIKE '%ОВ-АК%' OR e."Name" LIKE '%ОВ-ГПТ%' OR
-      e."Name" LIKE '%ОТ-ОТ%' OR e."Name" LIKE '%ОТ-ТС%' OR e."Name" LIKE '%ОТ-ХС%' OR
-      e."Name" LIKE '%ОТ-ИТП%' OR e."Name" LIKE '%ОТ-ВК%' OR e."Name" LIKE '%ОТ-В%' OR
-      e."Name" LIKE '%ОТ-К%'  OR e."Name" LIKE '%ОТ-ПТ%' OR e."Name" LIKE '%ОТ-ЭМ%' OR
-      e."Name" LIKE '%ОТ-СС%' OR e."Name" LIKE '%ОТ-СПЗ%' OR e."Name" LIKE '%ОТ-АК%' OR
-      e."Name" LIKE '%ОТ-ГПТ%' OR
-      e."Name" LIKE '%ТС-ТС%' OR e."Name" LIKE '%ТС-ХС%' OR e."Name" LIKE '%ТС-ИТП%' OR
-      e."Name" LIKE '%ТС-ВК%' OR e."Name" LIKE '%ТС-В%'  OR e."Name" LIKE '%ТС-К%' OR
-      e."Name" LIKE '%ТС-ПТ%' OR e."Name" LIKE '%ТС-ЭМ%' OR e."Name" LIKE '%ТС-СС%' OR
-      e."Name" LIKE '%ТС-СПЗ%' OR e."Name" LIKE '%ТС-АК%' OR e."Name" LIKE '%ТС-ГПТ%' OR
-      e."Name" LIKE '%ХС-ХС%' OR e."Name" LIKE '%ХС-ИТП%' OR e."Name" LIKE '%ХС-ВК%' OR
-      e."Name" LIKE '%ХС-В%'  OR e."Name" LIKE '%ХС-К%'   OR e."Name" LIKE '%ХС-ПТ%' OR
-      e."Name" LIKE '%ХС-ЭМ%' OR e."Name" LIKE '%ХС-СС%' OR e."Name" LIKE '%ХС-СПЗ%' OR
-      e."Name" LIKE '%ХС-АК%' OR e."Name" LIKE '%ХС-ГПТ%' OR
-      e."Name" LIKE '%ИТП-ИТП%' OR e."Name" LIKE '%ИТП-ВК%' OR e."Name" LIKE '%ИТП-В%' OR
-      e."Name" LIKE '%ИТП-К%'  OR e."Name" LIKE '%ИТП-ПТ%' OR e."Name" LIKE '%ИТП-ЭМ%' OR
-      e."Name" LIKE '%ИТП-СС%' OR e."Name" LIKE '%ИТП-СПЗ%' OR e."Name" LIKE '%ИТП-АК%' OR
-      e."Name" LIKE '%ИТП-ГПТ%' OR
-      e."Name" LIKE '%ВК-ВК%' OR e."Name" LIKE '%ВК-В%'  OR e."Name" LIKE '%ВК-К%' OR
-      e."Name" LIKE '%ВК-ПТ%' OR e."Name" LIKE '%ВК-ЭМ%' OR e."Name" LIKE '%ВК-СС%' OR
-      e."Name" LIKE '%ВК-СПЗ%' OR e."Name" LIKE '%ВК-АК%' OR e."Name" LIKE '%ВК-ГПТ%' OR
-      e."Name" LIKE '%В-В%'   OR e."Name" LIKE '%В-К%'   OR e."Name" LIKE '%В-ПТ%' OR
-      e."Name" LIKE '%В-ЭМ%' OR e."Name" LIKE '%В-СС%' OR e."Name" LIKE '%В-СПЗ%' OR
-      e."Name" LIKE '%В-АК%' OR e."Name" LIKE '%В-ГПТ%' OR
-      e."Name" LIKE '%К-К%'   OR e."Name" LIKE '%К-ПТ%' OR e."Name" LIKE '%К-ЭМ%' OR
-      e."Name" LIKE '%К-СС%' OR e."Name" LIKE '%К-СПЗ%' OR e."Name" LIKE '%К-АК%' OR
-      e."Name" LIKE '%К-ГПТ%' OR
-      e."Name" LIKE '%ПТ-ПТ%' OR e."Name" LIKE '%ПТ-ЭМ%' OR e."Name" LIKE '%ПТ-СС%' OR
-      e."Name" LIKE '%ПТ-СПЗ%' OR e."Name" LIKE '%ПТ-АК%' OR e."Name" LIKE '%ПТ-ГПТ%' OR
-      e."Name" LIKE '%ЭМ-ЭМ%' OR e."Name" LIKE '%ЭМ-СС%' OR e."Name" LIKE '%ЭМ-СПЗ%' OR
-      e."Name" LIKE '%ЭМ-АК%' OR e."Name" LIKE '%ЭМ-ГПТ%' OR
-      e."Name" LIKE '%СС-СС%' OR e."Name" LIKE '%СС-СПЗ%' OR e."Name" LIKE '%СС-АК%' OR
-      e."Name" LIKE '%СС-ГПТ%' OR
-      e."Name" LIKE '%СПЗ-СПЗ%' OR e."Name" LIKE '%СПЗ-АК%' OR e."Name" LIKE '%СПЗ-ГПТ%' OR
-      e."Name" LIKE '%АК-АК%' OR e."Name" LIKE '%АК-ГПТ%' OR
-      e."Name" LIKE '%ГПТ-ГПТ%'
+      -- Используем то же регулярное выражение, что и в детальном отчете
+      e."Name" ~ '_(ОВ|ОТ|ТС|ХС|ИТП|ВК|В|К|ПТ|ЭМ|СС|СПЗ|АК|ГПТ)-(ОВ|ОТ|ТС|ХС|ИТП|ВК|В|К|ПТ|ЭМ|СС|СПЗ|АК|ГПТ)_'
     GROUP BY eu."UpdateDate"
     ORDER BY eu."UpdateDate" DESC
     LIMIT 10
   `;
   const { rows } = await currentPool.query(sql);
   return rows.reverse();
+}
+
+async function getEnEnDetails() {
+  const sql = `
+    WITH LastUpdate AS (
+      -- Находим дату самого последнего обновления
+      SELECT MAX("UpdateDate") as "MaxDate" FROM "EntriesUpdates"
+    ),
+    LatestData AS (
+      -- 1. Получаем уникальные записи за последнюю дату
+      SELECT DISTINCT ON (e."ID") 
+        e."ID",
+        e."Name",
+        (REGEXP_MATCH(e."Name", '_([А-ЯЁA-Z]+)-([А-ЯЁA-Z]+)_'))[1] AS "MainSystem",
+        (REGEXP_MATCH(e."Name", '_([А-ЯЁA-Z]+)-([А-ЯЁA-Z]+)_'))[2] AS "SecondarySystem",
+        STRPOS(e."Name", '_VS_') AS "VSPos",
+        eu."CollisionsAmount"
+      FROM "Entries" e
+      JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
+      JOIN LastUpdate lu ON eu."UpdateDate" = lu."MaxDate"
+      WHERE e."Name" ~ '_(ОВ|ОТ|ТС|ХС|ИТП|ВК|В|К|ПТ|ЭМ|СС|СПЗ|АК|ГПТ)-(ОВ|ОТ|ТС|ХС|ИТП|ВК|В|К|ПТ|ЭМ|СС|СПЗ|АК|ГПТ)_'
+        AND eu."CollisionsAmount" > 0
+      ORDER BY e."ID", eu."UpdateDate" DESC
+    ),
+    ProcessedData AS (
+      -- 2. Очищаем названия категорий
+      SELECT 
+        "MainSystem" AS "PrimaryElement",
+        "SecondarySystem" AS "SystemType",
+        REGEXP_REPLACE(
+          TRIM(SUBSTRING("Name" FROM "VSPos" + 4)), 
+          '^(' || "SecondarySystem" || ')(_|\\-| )', 
+          '', 
+          'i'
+        ) AS "CategoryElement",
+        "CollisionsAmount"
+      FROM LatestData
+      WHERE "VSPos" > 0
+    ),
+    GroupedCategories AS (
+      -- 3. СУММИРУЕМ одинаковые категории внутри систем
+      -- Именно здесь происходит схлопывание повторов типа "К Трубы (больше 100)"
+      SELECT 
+        "PrimaryElement",
+        "SystemType",
+        "CategoryElement",
+        SUM("CollisionsAmount") as "CategorySum"
+      FROM ProcessedData
+      GROUP BY "PrimaryElement", "SystemType", "CategoryElement"
+    )
+    -- 4. Итоговая сборка в JSON
+    SELECT 
+      "PrimaryElement",
+      SUM("CategorySum") as "GroupTotal",
+      json_agg(json_build_object(
+        'system_type', "SystemType",
+        'primary_part', "PrimaryElement",
+        'category_part', "CategoryElement",
+        'amount', "CategorySum"
+      ) ORDER BY "SystemType" ASC, "CategorySum" DESC) as "Details"
+    FROM GroupedCategories
+    GROUP BY "PrimaryElement"
+    ORDER BY "PrimaryElement" ASC;
+  `;
+  const { rows } = await currentPool.query(sql);
+  return rows;
 }
 
 module.exports = {
@@ -835,4 +863,5 @@ module.exports = {
   getArEnDetails,
   getKrEnDetails,
   getThEnDetails,
+  getEnEnDetails,
 };

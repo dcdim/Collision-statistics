@@ -209,7 +209,7 @@ app.get('/api/details/aren', async (req, res) => {
     const details = await db.getArEnDetails();
     res.json(details || []); 
   } catch (err) {
-    console.error(err);
+    console.error('Ошибка при получении деталей АР-ИС:', err);
     res.status(500).json({ error: 'Ошибка базы данных', message: err.message });
   }
 });
@@ -219,7 +219,7 @@ app.get('/api/details/kren', async (req, res) => {
     const details = await db.getKrEnDetails();
     res.json(details || []); 
   } catch (err) {
-    console.error(err);
+    console.error('Ошибка при получении деталей КР-ИС:', err);
     res.status(500).json({ error: 'Ошибка базы данных', message: err.message });
   }
 });
@@ -229,7 +229,17 @@ app.get('/api/details/then', async (req, res) => {
     const details = await db.getThEnDetails();
     res.json(details || []); 
   } catch (err) {
-    console.error(err);
+    console.error('Ошибка при получении деталей ТХ-ИС:', err);
+    res.status(500).json({ error: 'Ошибка базы данных', message: err.message });
+  }
+});
+
+app.get('/api/details/enen', async (req, res) => {
+  try {
+    const details = await db.getEnEnDetails();
+    res.json(details || []); 
+  } catch (err) {
+    console.error('Ошибка при получении деталей ИС-ИС:', err);
     res.status(500).json({ error: 'Ошибка базы данных', message: err.message });
   }
 });

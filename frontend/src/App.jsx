@@ -24,6 +24,7 @@ import DetailsPageTHTH from './components/DetailsPageTHTH';
 import DetailsPageAREN from './components/DetailsPageAREN';
 import DetailsPageKREN from './components/DetailsPageKREN';
 import DetailsPageTHEN from './components/DetailsPageTHEN';
+import DetailsPageENEN from './components/DetailsPageENEN';
 import Button from '@mui/material/Button';
 
 function App() {
@@ -244,6 +245,15 @@ function App() {
                       <div className="chart-wrapper">
                         {chartDataENEN.length > 0 && <BarChartENEN data={chartDataENEN} />}
                       </div>
+                      <Button 
+                        component={Link} 
+                        to="/details/enen" 
+                        variant="outlined" 
+                        size="small"
+                        sx={{ mt: 2 }}
+                      >
+                        Подробнее
+                      </Button>
                     </div>
 
                     <div className="chart-card">
@@ -285,6 +295,7 @@ function App() {
         <Route path="/details/aren" element={<DetailsPageAREN />} />
         <Route path="/details/kren" element={<DetailsPageKREN />} />
         <Route path="/details/then" element={<DetailsPageTHEN />} />
+        <Route path="/details/enen" element={<DetailsPageENEN />} />
       </Routes>
     </div>
   );

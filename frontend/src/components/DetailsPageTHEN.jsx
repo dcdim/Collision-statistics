@@ -223,7 +223,7 @@ const DetailsPageTHEN = () => {
               <TableRow>
                 <TableCell width="60px" />
                 <TableCell width="35%">Основной элемент</TableCell>
-                <TableCell width="45%">Проверка с категорией ИС</TableCell>
+                <TableCell width="45%">Пересечения (Системы и категории)</TableCell>
                 <TableCell width="15%" align="right">Коллизии</TableCell>
               </TableRow>
             </TableHead>

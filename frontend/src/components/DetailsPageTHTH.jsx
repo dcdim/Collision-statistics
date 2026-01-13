@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { 
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
-  TableFooter, Paper, Typography, Button, Box, Collapse, IconButton 
+  TableFooter, Paper, Typography, Button, Box, Collapse, IconButton, CircularProgress 
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -29,7 +29,7 @@ function Row({ row, isOpen, onToggle }) {
         className={isSingle ? 'static-row' : `collapsible-row ${isOpen ? 'row-active' : ''}`} 
         onClick={!isSingle ? onToggle : undefined}
       >
-        <TableCell width="50px">
+        <TableCell width="60px">
           {!isSingle && (
             <IconButton size="small" color={isOpen ? "primary" : "default"}>
               {isOpen ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
@@ -52,10 +52,12 @@ function Row({ row, isOpen, onToggle }) {
                   <TableBody>
                     {row.Details.map((detail, idx) => (
                       <TableRow key={idx} className="inner-detail-row">
-                        <TableCell width="50px" sx={{ border: 'none' }} />
+                        <TableCell width="60px" sx={{ border: 'none' }} />
                         <TableCell width="35%" sx={{ border: 'none' }}>{detail.primary_part}</TableCell>
                         <TableCell width="45%" sx={{ border: 'none' }}>{detail.category_part}</TableCell>
-                        <TableCell width="15%" align="right" sx={{ border: 'none', pr: 4 }}>{detail.amount}</TableCell>
+                        <TableCell width="15%" align="right" sx={{ border: 'none', pr: 4, fontWeight: 600 }}>
+                          {detail.amount}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -80,25 +82,34 @@ const DetailsPageTHTH = () => {
     fetch('/api/details/thth')
       .then(res => res.json())
       .then(json => {
-        setData(json);
+        const filtered = Array.isArray(json) ? json.filter(r => Number(r.GroupTotal) > 0) : [];
+        setData(filtered);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setData([]);
+        setLoading(false);
+      });
   };
 
   useEffect(() => { loadData(); }, []);
 
   const handleDbChange = async (dbName) => {
-    await fetch('/api/switch-db', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dbName }),
-    });
-    setOpenRows({});
-    loadData();
+    setLoading(true);
+    try {
+      await fetch('/api/switch-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dbName }),
+      });
+      setOpenRows({});
+      loadData();
+    } catch (e) {
+      setLoading(false);
+    }
   };
 
-  const grandTotal = data.reduce((sum, row) => sum + Number(row.GroupTotal), 0);
+  const grandTotal = useMemo(() => data.reduce((sum, row) => sum + Number(row.GroupTotal), 0), [data]);
 
   return (
     <div className="details-page-container">
@@ -114,20 +125,29 @@ const DetailsPageTHTH = () => {
         <DbSelector onSelect={handleDbChange} />
       </Box>
 
-      <Typography variant="h4" className="details-title">Детализация коллизий: ТХ-ТХ</Typography>
+      <Typography variant="h4" className="details-title">ТХ — ТХ</Typography>
       
       {loading ? (
-        <Box sx={{ p: 8, textAlign: 'center' }}><Typography variant="h6">Загрузка данных ТХ-ТХ...</Typography></Box>
+        <Box sx={{ p: 10, textAlign: 'center' }}>
+          <CircularProgress size={45} sx={{ mb: 2 }} />
+          <Typography color="textSecondary">Загрузка данных ТХ-ТХ...</Typography>
+        </Box>
+      ) : data.length === 0 ? (
+        <Paper sx={{ p: 10, textAlign: 'center', borderRadius: '12px' }}>
+          <Typography variant="h5" color="textSecondary" sx={{ fontWeight: 500 }}>
+            Коллизий нет
+          </Typography>
+        </Paper>
       ) : (
         <TableContainer component={Paper} elevation={3} sx={{ borderRadius: '12px', overflow: 'hidden' }}>
           <Table sx={{ tableLayout: 'fixed' }}>
             <TableHead className="table-header-dark">
               <TableRow>
-                <TableCell width="50px" />
+                <TableCell width="60px" />
                 <TableCell width="35%">Основной элемент</TableCell>
                 <TableCell width="45%">Пересечения с категорией</TableCell>
-                <TableCell width="15%" align="right">Сумма коллизий</TableCell>
-              </TableRow> head
+                <TableCell width="15%" align="right">Коллизии</TableCell>
+              </TableRow>
             </TableHead>
             <TableBody>
               {data.map((row) => (
@@ -141,7 +161,7 @@ const DetailsPageTHTH = () => {
             </TableBody>
             <TableFooter className="table-footer-summary">
               <TableRow>
-                <TableCell width="50px" />
+                <TableCell width="60px" />
                 <TableCell colSpan={2} align="right" sx={{ pr: 2 }}>
                   <Typography className="total-label" variant="h6">ИТОГО:</Typography>
                 </TableCell>

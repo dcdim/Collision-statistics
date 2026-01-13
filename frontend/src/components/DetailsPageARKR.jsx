@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { 
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
-  TableFooter, Paper, Typography, Button, Box, Collapse, IconButton 
+  TableFooter, Paper, Typography, Button, Box, Collapse, IconButton, CircularProgress 
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import { useNavigate } from 'react-router-dom';
-import DbSelector from './DbSelector'; // Импорт компонента выбора БД
- 
+import DbSelector from './DbSelector';
+
 const getPluralCategory = (count) => {
   const lastDigit = count % 10;
   const lastTwoDigits = count % 100;
@@ -17,11 +17,18 @@ const getPluralCategory = (count) => {
   if (lastDigit >= 2 && lastDigit <= 4) return 'категории';
   return 'категорий';
 };
- 
+
 function Row({ row, isOpen, onToggle }) {
-  const detailsCount = row.Details ? row.Details.length : 0;
+  const validDetails = useMemo(() => 
+    (row.Details || []).filter(d => d.amount > 0), 
+    [row.Details]
+  );
+  
+  const detailsCount = validDetails.length;
+  if (detailsCount === 0) return null;
+
   const isSingle = detailsCount === 1;
-  const singleDetail = isSingle ? row.Details[0] : null;
+  const singleDetail = isSingle ? validDetails[0] : null;
 
   return (
     <React.Fragment>
@@ -36,13 +43,7 @@ function Row({ row, isOpen, onToggle }) {
             </IconButton>
           )}
         </TableCell>
-        
-        {/* Столбец АР */}
-        <TableCell width="35%" className="font-weight-600">
-          {row.PrimaryElement}
-        </TableCell>
-        
-        {/* Столбец КР (или количество категорий) */}
+        <TableCell width="35%" className="font-weight-600">{row.PrimaryElement}</TableCell>
         <TableCell width="45%">
           {isSingle ? (
             singleDetail.category_part
@@ -50,14 +51,9 @@ function Row({ row, isOpen, onToggle }) {
             !isOpen ? `${detailsCount} ${getPluralCategory(detailsCount)}` : ""
           )}
         </TableCell>
-        
-        {/* Сумма коллизий */}
-        <TableCell width="15%" align="right" className="font-weight-700">
-          {row.GroupTotal}
-        </TableCell>
+        <TableCell width="15%" align="right" className="font-weight-700">{row.GroupTotal}</TableCell>
       </TableRow>
 
-      {/* Вложенная таблица деталей */}
       {!isSingle && (
         <TableRow>
           <TableCell colSpan={4} sx={{ py: 0, px: 0 }}> 
@@ -65,18 +61,12 @@ function Row({ row, isOpen, onToggle }) {
               <Box className="details-expanded-box-active">
                 <Table size="small" sx={{ tableLayout: 'fixed' }}>
                   <TableBody>
-                    {row.Details.map((detail, idx) => (
+                    {validDetails.map((detail, idx) => (
                       <TableRow key={idx} className="inner-detail-row">
                         <TableCell width="50px" sx={{ border: 'none' }} />
-                        <TableCell width="35%" sx={{ border: 'none' }}>
-                          {detail.primary_part}
-                        </TableCell>
-                        <TableCell width="45%" sx={{ border: 'none' }}>
-                          {detail.category_part}
-                        </TableCell>
-                        <TableCell width="15%" align="right" sx={{ border: 'none', pr: 4 }}>
-                          {detail.amount}
-                        </TableCell>
+                        <TableCell width="35%" sx={{ border: 'none' }}>{detail.primary_part}</TableCell>
+                        <TableCell width="45%" sx={{ border: 'none' }}>{detail.category_part}</TableCell>
+                        <TableCell width="15%" align="right" sx={{ border: 'none', pr: 4 }}>{detail.amount}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -96,45 +86,49 @@ const DetailsPageARKR = () => {
   const [openRows, setOpenRows] = useState({}); 
   const navigate = useNavigate();
 
-  // Функция загрузки данных именно для раздела АР-КР
   const loadData = () => {
     setLoading(true);
-    fetch('/api/details/arkr') // Вызов эндпоинта для АР-КР
+    fetch('/api/details/arkr')
       .then(res => res.json())
       .then(json => {
-        setData(json);
+        // Оставляем только те группы, где сумма коллизий реально больше нуля
+        const filtered = Array.isArray(json) ? json.filter(r => Number(r.GroupTotal) > 0) : [];
+        setData(filtered);
         setLoading(false);
       })
       .catch(err => {
         console.error("Ошибка загрузки АР-КР:", err);
+        setData([]);
         setLoading(false);
       });
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
-  // Обработчик смены базы данных
   const handleDbChange = async (dbName) => {
+    setLoading(true);
     try {
-      await fetch('/api/switch-db', {
+      const response = await fetch('/api/switch-db', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dbName }),
       });
-      setOpenRows({}); 
-      loadData();      
+      if (response.ok) {
+        setOpenRows({});
+        loadData();
+      }
     } catch (err) {
       console.error("Ошибка при смене БД:", err);
+      setLoading(false);
     }
   };
 
-  const grandTotal = data.reduce((sum, row) => sum + Number(row.GroupTotal), 0);
+  const grandTotal = useMemo(() => {
+    return data.reduce((sum, row) => sum + Number(row.GroupTotal), 0);
+  }, [data]);
 
   return (
     <div className="details-page-container">
-      {/* Панель управления */}
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button onClick={() => navigate(-1)} variant="outlined" className="back-button">
@@ -151,7 +145,6 @@ const DetailsPageARKR = () => {
             </Button>
           )}
         </Box>
-        
         <DbSelector onSelect={handleDbChange} />
       </Box>
 
@@ -161,8 +154,15 @@ const DetailsPageARKR = () => {
       
       {loading ? (
         <Box sx={{ p: 8, textAlign: 'center' }}>
+          <CircularProgress size={40} sx={{ mb: 2 }} />
           <Typography variant="h6" color="textSecondary">Загрузка данных АР-КР...</Typography>
         </Box>
+      ) : data.length === 0 ? (
+        <Paper sx={{ p: 10, textAlign: 'center', borderRadius: '12px' }}>
+          <Typography variant="h5" color="textSecondary" sx={{ fontWeight: 500 }}>
+            Коллизий нет
+          </Typography>
+        </Paper>
       ) : (
         <TableContainer component={Paper} elevation={3} sx={{ borderRadius: '12px', overflow: 'hidden' }}>
           <Table sx={{ tableLayout: 'fixed' }}>

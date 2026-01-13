@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { 
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
-  TableFooter, Paper, Typography, Button, Box, Collapse, IconButton 
+  TableFooter, Paper, Typography, Button, Box, Collapse, IconButton, CircularProgress 
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -19,9 +19,16 @@ const getPluralCategory = (count) => {
 };
 
 function Row({ row, isOpen, onToggle }) {
-  const detailsCount = row.Details ? row.Details.length : 0;
+  const validDetails = useMemo(() => 
+    (row.Details || []).filter(d => d.amount > 0), 
+    [row.Details]
+  );
+  
+  const detailsCount = validDetails.length;
+  if (detailsCount === 0) return null;
+
   const isSingle = detailsCount === 1;
-  const singleDetail = isSingle ? row.Details[0] : null;
+  const singleDetail = isSingle ? validDetails[0] : null;
 
   return (
     <React.Fragment>
@@ -50,7 +57,7 @@ function Row({ row, isOpen, onToggle }) {
               <Box className="details-expanded-box-active">
                 <Table size="small" sx={{ tableLayout: 'fixed' }}>
                   <TableBody>
-                    {row.Details.map((detail, idx) => (
+                    {validDetails.map((detail, idx) => (
                       <TableRow key={idx} className="inner-detail-row">
                         <TableCell width="50px" sx={{ border: 'none' }} />
                         <TableCell width="35%" sx={{ border: 'none' }}>{detail.primary_part}</TableCell>
@@ -80,25 +87,34 @@ const DetailsPageKRKR = () => {
     fetch('/api/details/krkr')
       .then(res => res.json())
       .then(json => {
-        setData(json);
+        const filtered = Array.isArray(json) ? json.filter(r => Number(r.GroupTotal) > 0) : [];
+        setData(filtered);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setData([]);
+        setLoading(false);
+      });
   };
 
   useEffect(() => { loadData(); }, []);
 
   const handleDbChange = async (dbName) => {
-    await fetch('/api/switch-db', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dbName }),
-    });
-    setOpenRows({});
-    loadData();
+    setLoading(true);
+    try {
+      await fetch('/api/switch-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dbName }),
+      });
+      setOpenRows({});
+      loadData();
+    } catch (e) {
+      setLoading(false);
+    }
   };
 
-  const grandTotal = data.reduce((sum, row) => sum + Number(row.GroupTotal), 0);
+  const grandTotal = useMemo(() => data.reduce((sum, row) => sum + Number(row.GroupTotal), 0), [data]);
 
   return (
     <div className="details-page-container">
@@ -117,7 +133,16 @@ const DetailsPageKRKR = () => {
       <Typography variant="h4" className="details-title">Детализация коллизий: КР-КР</Typography>
       
       {loading ? (
-        <Box sx={{ p: 8, textAlign: 'center' }}><Typography variant="h6">Обновление КР-КР...</Typography></Box>
+        <Box sx={{ p: 10, textAlign: 'center' }}>
+          <CircularProgress size={40} sx={{ mb: 2 }} />
+          <Typography variant="h6" color="textSecondary">Обновление КР-КР...</Typography>
+        </Box>
+      ) : data.length === 0 ? (
+        <Paper sx={{ p: 10, textAlign: 'center', borderRadius: '12px' }}>
+          <Typography variant="h5" color="textSecondary" sx={{ fontWeight: 500 }}>
+            Коллизий нет
+          </Typography>
+        </Paper>
       ) : (
         <TableContainer component={Paper} elevation={3} sx={{ borderRadius: '12px', overflow: 'hidden' }}>
           <Table sx={{ tableLayout: 'fixed' }}>

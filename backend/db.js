@@ -49,11 +49,18 @@ async function getEntriesUpdatesArKr() {
 
 async function getArKrDetails() {
   const sql = `
-    WITH LatestData AS (
+    WITH LastUpdate AS (
+      -- Находим дату самого последнего обновления для АР-КР
+      SELECT MAX(eu."UpdateDate") as "MaxDate" 
+      FROM "EntriesUpdates" eu
+      JOIN "Entries" e ON eu."EntryId" = e."ID"
+      WHERE e."Name" LIKE '%_АР-КР_%'
+    ),
+    LatestData AS (
+      -- Получаем уникальные записи строго за последнюю дату
       SELECT DISTINCT ON (e."ID") 
         e."ID",
         e."Name",
-        -- 1. Извлекаем АР-часть (между _АР-КР_ и _VS_)
         REPLACE(REPLACE(REPLACE(TRIM(
           SUBSTRING(
             e."Name" FROM 
@@ -62,7 +69,6 @@ async function getArKrDetails() {
           )
         ), 'АР_', ''), 'АР-', ''), 'АР ', '') AS "PrimaryElement",
         
-        -- 2. Извлекаем КР-часть (после _VS_)
         REPLACE(REPLACE(REPLACE(TRIM(
           SUBSTRING(e."Name" FROM STRPOS(e."Name", '_VS_') + 4)
         ), 'КР_', ''), 'КР-', ''), 'КР ', '') AS "CategoryElement",
@@ -70,10 +76,13 @@ async function getArKrDetails() {
         eu."CollisionsAmount"
       FROM "Entries" e
       JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
-      WHERE e."Name" LIKE '%_АР-КР_%'
+      JOIN LastUpdate lu ON eu."UpdateDate" = lu."MaxDate"
+      WHERE e."Name" LIKE '%_АР-КР_%' 
+        AND eu."CollisionsAmount" > 0 -- Скрываем те, где 0
       ORDER BY e."ID", eu."UpdateDate" DESC
     ),
     MergedData AS (
+      -- Группируем для суммирования одинаковых категорий
       SELECT 
         "PrimaryElement",
         "CategoryElement",
@@ -81,6 +90,7 @@ async function getArKrDetails() {
       FROM LatestData
       GROUP BY "PrimaryElement", "CategoryElement"
     )
+    -- Итоговая сборка с фильтрацией пустых групп
     SELECT 
       "PrimaryElement",
       SUM("TotalAmount") as "GroupTotal",
@@ -91,6 +101,7 @@ async function getArKrDetails() {
       ) ORDER BY "TotalAmount" DESC) as "Details"
     FROM MergedData
     GROUP BY "PrimaryElement"
+    HAVING SUM("TotalAmount") > 0 -- Не выводим системы с общим нулем
     ORDER BY "GroupTotal" DESC;
   `;
   const { rows } = await currentPool.query(sql);
@@ -115,12 +126,18 @@ async function getEntriesUpdatesArAr() {
 
 async function getArArDetails() {
   const sql = `
-    WITH LatestData AS (
-      -- 1. Получаем самые свежие данные для каждого ID записи
+    WITH LastUpdate AS (
+      -- Находим дату самого последнего импорта для АР-АР
+      SELECT MAX(eu."UpdateDate") as "MaxDate" 
+      FROM "EntriesUpdates" eu
+      JOIN "Entries" e ON eu."EntryId" = e."ID"
+      WHERE e."Name" LIKE '%_АР-АР_%'
+    ),
+    LatestData AS (
+      -- Берем данные СТРОГО за эту дату и СТРОГО с коллизиями > 0
       SELECT DISTINCT ON (e."ID") 
         e."ID",
         e."Name",
-        -- Извлекаем Основной элемент и чистим префиксы
         REPLACE(REPLACE(TRIM(
           SUBSTRING(
             e."Name" FROM 
@@ -129,7 +146,6 @@ async function getArArDetails() {
           )
         ), 'АР_', ''), 'АР-', '') AS "PrimaryElement",
         
-        -- Извлекаем категорию после _VS_ и чистим префиксы
         REPLACE(REPLACE(TRIM(
           SUBSTRING(e."Name" FROM STRPOS(e."Name", '_VS_') + 4)
         ), 'АР_', ''), 'АР-', '') AS "CategoryElement",
@@ -137,11 +153,12 @@ async function getArArDetails() {
         eu."CollisionsAmount"
       FROM "Entries" e
       JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
-      WHERE e."Name" LIKE '%_АР-АР_%'
+      JOIN LastUpdate lu ON eu."UpdateDate" = lu."MaxDate" -- Фильтр по последней дате
+      WHERE e."Name" LIKE '%_АР-АР_%' 
+        AND eu."CollisionsAmount" > 0
       ORDER BY e."ID", eu."UpdateDate" DESC
     ),
     MergedCategories AS (
-      -- 2. Группируем по ОБОИМ элементам, чтобы сложить значения одинаковых категорий
       SELECT 
         "PrimaryElement",
         "CategoryElement",
@@ -149,10 +166,8 @@ async function getArArDetails() {
       FROM LatestData
       GROUP BY "PrimaryElement", "CategoryElement"
     )
-    -- 3. Собираем финальный JSON с агрегацией по PrimaryElement
     SELECT 
       "PrimaryElement",
-      COUNT("CategoryElement") as "SubElementsCount",
       SUM("TotalCollisions") as "GroupTotal",
       json_agg(json_build_object(
         'primary_part', "PrimaryElement",
@@ -185,12 +200,18 @@ async function getEntriesUpdatesArTh() {
 
 async function getArThDetails() {
   const sql = `
-    WITH LatestData AS (
-      -- 1. Берем только последние данные для каждого ID записи
+    WITH LastUpdate AS (
+      -- 1. Находим дату самого последнего обновления именно для АР-ТХ
+      SELECT MAX(eu."UpdateDate") as "MaxDate" 
+      FROM "EntriesUpdates" eu
+      JOIN "Entries" e ON eu."EntryId" = e."ID"
+      WHERE e."Name" LIKE '%_АР-ТХ_%'
+    ),
+    LatestData AS (
+      -- 2. Берем записи строго за эту дату с коллизиями больше 0
       SELECT DISTINCT ON (e."ID") 
         e."ID",
         e."Name",
-        -- Извлекаем АР-часть и чистим префиксы (АР_, АР-, АР )
         REPLACE(REPLACE(REPLACE(TRIM(
           SUBSTRING(
             e."Name" FROM 
@@ -199,7 +220,6 @@ async function getArThDetails() {
           )
         ), 'АР_', ''), 'АР-', ''), 'АР ', '') AS "PrimaryElement",
         
-        -- Извлекаем ТХ-часть (после _VS_) и чистим префиксы (ТХ_, ТХ-, ТХ )
         REPLACE(REPLACE(REPLACE(TRIM(
           SUBSTRING(e."Name" FROM STRPOS(e."Name", '_VS_') + 4)
         ), 'ТХ_', ''), 'ТХ-', ''), 'ТХ ', '') AS "CategoryElement",
@@ -207,11 +227,13 @@ async function getArThDetails() {
         eu."CollisionsAmount"
       FROM "Entries" e
       JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
+      JOIN LastUpdate lu ON eu."UpdateDate" = lu."MaxDate"
       WHERE e."Name" LIKE '%_АР-ТХ_%'
+        AND eu."CollisionsAmount" > 0
       ORDER BY e."ID", eu."UpdateDate" DESC
     ),
     MergedData AS (
-      -- 2. Группируем по очищенным парам элементов
+      -- 3. Группируем по очищенным парам элементов
       SELECT 
         "PrimaryElement",
         "CategoryElement",
@@ -219,7 +241,7 @@ async function getArThDetails() {
       FROM LatestData
       GROUP BY "PrimaryElement", "CategoryElement"
     )
-    -- 3. Агрегация для таблицы
+    -- 4. Итоговая агрегация
     SELECT 
       "PrimaryElement",
       SUM("TotalAmount") as "GroupTotal",
@@ -230,6 +252,7 @@ async function getArThDetails() {
       ) ORDER BY "TotalAmount" DESC) as "Details"
     FROM MergedData
     GROUP BY "PrimaryElement"
+    HAVING SUM("TotalAmount") > 0
     ORDER BY "GroupTotal" DESC;
   `;
   const { rows } = await currentPool.query(sql);
@@ -254,12 +277,18 @@ async function getEntriesUpdatesKrKr() {
 
 async function getKrKrDetails() {
   const sql = `
-    WITH LatestData AS (
-      -- 1. Получаем последние данные по каждому ID
+    WITH LastUpdate AS (
+      -- 1. Находим дату самого последнего обновления для раздела КР-КР
+      SELECT MAX(eu."UpdateDate") as "MaxDate" 
+      FROM "EntriesUpdates" eu
+      JOIN "Entries" e ON eu."EntryId" = e."ID"
+      WHERE e."Name" LIKE '%_КР-КР_%'
+    ),
+    LatestData AS (
+      -- 2. Берем записи только за эту дату и где коллизий > 0
       SELECT DISTINCT ON (e."ID") 
         e."ID",
         e."Name",
-        -- Очистка первого элемента КР (между _КР-КР_ и _VS_)
         REPLACE(REPLACE(REPLACE(TRIM(
           SUBSTRING(
             e."Name" FROM 
@@ -268,7 +297,6 @@ async function getKrKrDetails() {
           )
         ), 'КР_', ''), 'КР-', ''), 'КР ', '') AS "PrimaryElement",
         
-        -- Очистка второго элемента КР (после _VS_)
         REPLACE(REPLACE(REPLACE(TRIM(
           SUBSTRING(e."Name" FROM STRPOS(e."Name", '_VS_') + 4)
         ), 'КР_', ''), 'КР-', ''), 'КР ', '') AS "CategoryElement",
@@ -276,11 +304,13 @@ async function getKrKrDetails() {
         eu."CollisionsAmount"
       FROM "Entries" e
       JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
+      JOIN LastUpdate lu ON eu."UpdateDate" = lu."MaxDate"
       WHERE e."Name" LIKE '%_КР-КР_%'
+        AND eu."CollisionsAmount" > 0
       ORDER BY e."ID", eu."UpdateDate" DESC
     ),
     MergedData AS (
-      -- 2. Группируем очищенные данные
+      -- 3. Группируем по очищенным парам
       SELECT 
         "PrimaryElement",
         "CategoryElement",
@@ -288,7 +318,7 @@ async function getKrKrDetails() {
       FROM LatestData
       GROUP BY "PrimaryElement", "CategoryElement"
     )
-    -- 3. Агрегация в JSON для интерфейса
+    -- 4. Итоговая агрегация с фильтрацией пустых групп
     SELECT 
       "PrimaryElement",
       SUM("TotalAmount") as "GroupTotal",
@@ -299,6 +329,7 @@ async function getKrKrDetails() {
       ) ORDER BY "TotalAmount" DESC) as "Details"
     FROM MergedData
     GROUP BY "PrimaryElement"
+    HAVING SUM("TotalAmount") > 0
     ORDER BY "GroupTotal" DESC;
   `;
   const { rows } = await currentPool.query(sql);
@@ -323,12 +354,18 @@ async function getEntriesUpdatesKrTh() {
 
 async function getKrThDetails() {
   const sql = `
-    WITH LatestData AS (
-      -- 1. Берем самые свежие данные для каждого ID
+    WITH LastUpdate AS (
+      -- 1. Находим дату самого последнего обновления для раздела КР-ТХ
+      SELECT MAX(eu."UpdateDate") as "MaxDate" 
+      FROM "EntriesUpdates" eu
+      JOIN "Entries" e ON eu."EntryId" = e."ID"
+      WHERE e."Name" LIKE '%_КР-ТХ_%'
+    ),
+    LatestData AS (
+      -- 2. Берем записи только за эту дату и где коллизий > 0
       SELECT DISTINCT ON (e."ID") 
         e."ID",
         e."Name",
-        -- Извлекаем КР-часть и чистим префиксы
         REPLACE(REPLACE(REPLACE(TRIM(
           SUBSTRING(
             e."Name" FROM 
@@ -337,7 +374,6 @@ async function getKrThDetails() {
           )
         ), 'КР_', ''), 'КР-', ''), 'КР ', '') AS "PrimaryElement",
         
-        -- Извлекаем ТХ-часть и чистим префиксы
         REPLACE(REPLACE(REPLACE(TRIM(
           SUBSTRING(e."Name" FROM STRPOS(e."Name", '_VS_') + 4)
         ), 'ТХ_', ''), 'ТХ-', ''), 'ТХ ', '') AS "CategoryElement",
@@ -345,11 +381,13 @@ async function getKrThDetails() {
         eu."CollisionsAmount"
       FROM "Entries" e
       JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
+      JOIN LastUpdate lu ON eu."UpdateDate" = lu."MaxDate"
       WHERE e."Name" LIKE '%_КР-ТХ_%'
+        AND eu."CollisionsAmount" > 0
       ORDER BY e."ID", eu."UpdateDate" DESC
     ),
     MergedData AS (
-      -- 2. Группируем очищенные элементы
+      -- 3. Группируем по очищенным парам
       SELECT 
         "PrimaryElement",
         "CategoryElement",
@@ -357,7 +395,7 @@ async function getKrThDetails() {
       FROM LatestData
       GROUP BY "PrimaryElement", "CategoryElement"
     )
-    -- 3. Агрегируем в JSON для фронтенда
+    -- 4. Итоговая агрегация с фильтрацией пустых групп
     SELECT 
       "PrimaryElement",
       SUM("TotalAmount") as "GroupTotal",
@@ -368,6 +406,7 @@ async function getKrThDetails() {
       ) ORDER BY "TotalAmount" DESC) as "Details"
     FROM MergedData
     GROUP BY "PrimaryElement"
+    HAVING SUM("TotalAmount") > 0
     ORDER BY "GroupTotal" DESC;
   `;
   const { rows } = await currentPool.query(sql);
@@ -392,12 +431,19 @@ async function getEntriesUpdatesThTh() {
 
 async function getThThDetails() {
   const sql = `
-    WITH LatestData AS (
-      -- 1. Получаем последние данные по каждому ID
+    WITH LastUpdate AS (
+      -- 1. Находим дату самого последнего обновления для раздела ТХ-ТХ
+      SELECT MAX(eu."UpdateDate") as "MaxDate" 
+      FROM "EntriesUpdates" eu
+      JOIN "Entries" e ON eu."EntryId" = e."ID"
+      WHERE e."Name" LIKE '%_ТХ-ТХ_%'
+    ),
+    LatestData AS (
+      -- 2. Получаем данные только за эту дату
       SELECT DISTINCT ON (e."ID") 
         e."ID",
         e."Name",
-        -- Очистка первого элемента ТХ (между _ТХ-ТХ_ и _VS_)
+        -- Очистка первого элемента ТХ
         REPLACE(REPLACE(REPLACE(TRIM(
           SUBSTRING(
             e."Name" FROM 
@@ -406,7 +452,7 @@ async function getThThDetails() {
           )
         ), 'ТХ_', ''), 'ТХ-', ''), 'ТХ ', '') AS "PrimaryElement",
         
-        -- Очистка второго элемента ТХ (после _VS_)
+        -- Очистка второго элемента ТХ
         REPLACE(REPLACE(REPLACE(TRIM(
           SUBSTRING(e."Name" FROM STRPOS(e."Name", '_VS_') + 4)
         ), 'ТХ_', ''), 'ТХ-', ''), 'ТХ ', '') AS "CategoryElement",
@@ -414,11 +460,13 @@ async function getThThDetails() {
         eu."CollisionsAmount"
       FROM "Entries" e
       JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
+      JOIN LastUpdate lu ON eu."UpdateDate" = lu."MaxDate"
       WHERE e."Name" LIKE '%_ТХ-ТХ_%'
+        AND eu."CollisionsAmount" > 0
       ORDER BY e."ID", eu."UpdateDate" DESC
     ),
     MergedData AS (
-      -- 2. Группируем очищенные данные, чтобы схлопнуть дубликаты из разных файлов
+      -- 3. Группируем очищенные данные
       SELECT 
         "PrimaryElement",
         "CategoryElement",
@@ -426,7 +474,7 @@ async function getThThDetails() {
       FROM LatestData
       GROUP BY "PrimaryElement", "CategoryElement"
     )
-    -- 3. Агрегация в JSON для таблицы с раскрывающимися списками
+    -- 4. Агрегация в JSON
     SELECT 
       "PrimaryElement",
       SUM("TotalAmount") as "GroupTotal",
@@ -437,6 +485,7 @@ async function getThThDetails() {
       ) ORDER BY "TotalAmount" DESC) as "Details"
     FROM MergedData
     GROUP BY "PrimaryElement"
+    HAVING SUM("TotalAmount") > 0
     ORDER BY "GroupTotal" DESC;
   `;
   const { rows } = await currentPool.query(sql);
@@ -468,48 +517,45 @@ async function getEntriesUpdatesArEn() {
 
 async function getArEnDetails() {
   const sql = `
-    WITH LatestData AS (
-      -- 1. Получаем последние данные и определяем код системы
+    WITH LastUpdate AS (
+      -- 1. Находим дату самого последнего обновления для инженерных систем
+      SELECT MAX(eu."UpdateDate") as "MaxDate" 
+      FROM "EntriesUpdates" eu
+      JOIN "Entries" e ON eu."EntryId" = e."ID"
+      WHERE e."Name" ~ '_АР-(ОВ|ОТ|ТС|ХС|ИТП|ВК|В|К|ПТ|ЭМ|СС|СПЗ|АК|ГПТ)_'
+    ),
+    LatestData AS (
+      -- 2. Получаем уникальные записи строго за последнюю дату
       SELECT DISTINCT ON (e."ID") 
         e."ID",
         e."Name",
-        -- Список систем:
         (REGEXP_MATCH(e."Name", '_АР-(ОВ|ОТ|ТС|ХС|ИТП|ВК|В|К|ПТ|ЭМ|СС|СПЗ|АК|ГПТ)_'))[1] AS "SystemType",
-        
-        -- Позиция начала системного маркера
         STRPOS(e."Name", '_АР-') AS "MarkerPos",
-
-        -- Извлечение правой части (после _VS_)
         TRIM(SUBSTRING(e."Name" FROM STRPOS(e."Name", '_VS_') + 4)) AS "RawSystemElement",
-        
         eu."CollisionsAmount"
       FROM "Entries" e
       JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
-      -- Фильтр: ищем любой из 14 разделов
+      JOIN LastUpdate lu ON eu."UpdateDate" = lu."MaxDate"
       WHERE e."Name" ~ '_АР-(ОВ|ОТ|ТС|ХС|ИТП|ВК|В|К|ПТ|ЭМ|СС|СПЗ|АК|ГПТ)_'
+        AND eu."CollisionsAmount" > 0 -- Скрываем нулевые
       ORDER BY e."ID", eu."UpdateDate" DESC
     ),
     ProcessedData AS (
-      -- 2. Глубокая очистка имен
+      -- 3. Очистка имен
       SELECT 
         "SystemType",
-        -- Очистка АР-части (левая сторона)
         REPLACE(REPLACE(REPLACE(TRIM(
           SUBSTRING(
             "Name" FROM "MarkerPos" + (LENGTH("SystemType") + 5) 
             FOR (STRPOS("Name", '_VS_') - ("MarkerPos" + (LENGTH("SystemType") + 5)))
           )
         ), 'АР_', ''), 'АР-', ''), 'АР ', '') AS "PrimaryElement",
-        
-        -- Очистка системной части (правая сторона): удаляем СС_, СС- или СС 
         REGEXP_REPLACE("RawSystemElement", '^(' || "SystemType" || ')(_|\\-| )', '', 'i') AS "CategoryElement",
-        
         "CollisionsAmount"
       FROM LatestData
       WHERE "SystemType" IS NOT NULL
     ),
     MergedData AS (
-      -- 3. Группировка данных
       SELECT 
         "PrimaryElement",
         "CategoryElement",
@@ -518,7 +564,7 @@ async function getArEnDetails() {
       FROM ProcessedData
       GROUP BY "PrimaryElement", "CategoryElement", "SystemType"
     )
-    -- 4. Сборка JSON
+    -- 4. Сборка JSON с фильтрацией пустых групп
     SELECT 
       "PrimaryElement",
       SUM("TotalAmount") as "GroupTotal",
@@ -530,6 +576,7 @@ async function getArEnDetails() {
       ) ORDER BY "TotalAmount" DESC) as "Details"
     FROM MergedData
     GROUP BY "PrimaryElement"
+    HAVING SUM("TotalAmount") > 0
     ORDER BY "GroupTotal" DESC;
   `;
   const { rows } = await currentPool.query(sql);
@@ -561,48 +608,46 @@ async function getEntriesUpdatesKrEn() {
 
 async function getKrEnDetails() {
   const sql = `
-    WITH LatestData AS (
-      -- 1. Получаем последние данные и определяем код системы
+    WITH LastUpdate AS (
+      -- 1. Находим дату самого последнего обновления для инженерных систем
+      SELECT MAX(eu."UpdateDate") as "MaxDate" 
+      FROM "EntriesUpdates" eu
+      JOIN "Entries" e ON eu."EntryId" = e."ID"
+      WHERE e."Name" ~ '_КР-(ОВ|ОТ|ТС|ХС|ИТП|ВК|В|К|ПТ|ЭМ|СС|СПЗ|АК|ГПТ)_'
+    ),
+    LatestData AS (
+      -- 2. Получаем данные за последнюю дату
       SELECT DISTINCT ON (e."ID") 
         e."ID",
         e."Name",
-        -- Список систем:
         (REGEXP_MATCH(e."Name", '_КР-(ОВ|ОТ|ТС|ХС|ИТП|ВК|В|К|ПТ|ЭМ|СС|СПЗ|АК|ГПТ)_'))[1] AS "SystemType",
-        
-        -- Позиция начала системного маркера
         STRPOS(e."Name", '_КР-') AS "MarkerPos",
-
-        -- Извлечение правой части (после _VS_)
         TRIM(SUBSTRING(e."Name" FROM STRPOS(e."Name", '_VS_') + 4)) AS "RawSystemElement",
-        
         eu."CollisionsAmount"
       FROM "Entries" e
       JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
-      -- Фильтр: ищем любой из 14 разделов
+      JOIN LastUpdate lu ON eu."UpdateDate" = lu."MaxDate"
       WHERE e."Name" ~ '_КР-(ОВ|ОТ|ТС|ХС|ИТП|ВК|В|К|ПТ|ЭМ|СС|СПЗ|АК|ГПТ)_'
+        AND eu."CollisionsAmount" > 0
       ORDER BY e."ID", eu."UpdateDate" DESC
     ),
     ProcessedData AS (
-      -- 2. Глубокая очистка имен
+      -- 3. Очистка имен
       SELECT 
         "SystemType",
-        -- Очистка КР-части (левая сторона)
         REPLACE(REPLACE(REPLACE(TRIM(
           SUBSTRING(
             "Name" FROM "MarkerPos" + (LENGTH("SystemType") + 5) 
             FOR (STRPOS("Name", '_VS_') - ("MarkerPos" + (LENGTH("SystemType") + 5)))
           )
         ), 'КР_', ''), 'КР-', ''), 'КР ', '') AS "PrimaryElement",
-        
-        -- Очистка системной части (правая сторона): удаляем СС_, СС- или СС 
         REGEXP_REPLACE("RawSystemElement", '^(' || "SystemType" || ')(_|\\-| )', '', 'i') AS "CategoryElement",
-        
         "CollisionsAmount"
       FROM LatestData
       WHERE "SystemType" IS NOT NULL
     ),
     MergedData AS (
-      -- 3. Группировка данных
+      -- 4. Группировка
       SELECT 
         "PrimaryElement",
         "CategoryElement",
@@ -611,7 +656,7 @@ async function getKrEnDetails() {
       FROM ProcessedData
       GROUP BY "PrimaryElement", "CategoryElement", "SystemType"
     )
-    -- 4. Сборка JSON
+    -- 5. Итоговый JSON
     SELECT 
       "PrimaryElement",
       SUM("TotalAmount") as "GroupTotal",
@@ -623,6 +668,7 @@ async function getKrEnDetails() {
       ) ORDER BY "TotalAmount" DESC) as "Details"
     FROM MergedData
     GROUP BY "PrimaryElement"
+    HAVING SUM("TotalAmount") > 0
     ORDER BY "GroupTotal" DESC;
   `;
   const { rows } = await currentPool.query(sql);
@@ -654,48 +700,46 @@ async function getEntriesUpdatesThEn() {
 
 async function getThEnDetails() {
   const sql = `
-    WITH LatestData AS (
-      -- 1. Получаем последние данные и определяем код системы
+    WITH LastUpdate AS (
+      -- 1. Находим дату самого последнего обновления для разделов ТХ-Инженерия
+      SELECT MAX(eu."UpdateDate") as "MaxDate" 
+      FROM "EntriesUpdates" eu
+      JOIN "Entries" e ON eu."EntryId" = e."ID"
+      WHERE e."Name" ~ '_ТХ-(ОВ|ОТ|ТС|ХС|ИТП|ВК|В|К|ПТ|ЭМ|СС|СПЗ|АК|ГПТ)_'
+    ),
+    LatestData AS (
+      -- 2. Получаем данные только за эту дату
       SELECT DISTINCT ON (e."ID") 
         e."ID",
         e."Name",
-        -- Список систем:
         (REGEXP_MATCH(e."Name", '_ТХ-(ОВ|ОТ|ТС|ХС|ИТП|ВК|В|К|ПТ|ЭМ|СС|СПЗ|АК|ГПТ)_'))[1] AS "SystemType",
-        
-        -- Позиция начала системного маркера
         STRPOS(e."Name", '_ТХ-') AS "MarkerPos",
-
-        -- Извлечение правой части (после _VS_)
         TRIM(SUBSTRING(e."Name" FROM STRPOS(e."Name", '_VS_') + 4)) AS "RawSystemElement",
-        
         eu."CollisionsAmount"
       FROM "Entries" e
       JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
-      -- Фильтр: ищем любой из 14 разделов
+      JOIN LastUpdate lu ON eu."UpdateDate" = lu."MaxDate"
       WHERE e."Name" ~ '_ТХ-(ОВ|ОТ|ТС|ХС|ИТП|ВК|В|К|ПТ|ЭМ|СС|СПЗ|АК|ГПТ)_'
+        AND eu."CollisionsAmount" > 0
       ORDER BY e."ID", eu."UpdateDate" DESC
     ),
     ProcessedData AS (
-      -- 2. Глубокая очистка имен
+      -- 3. Очистка имен (удаление префиксов ТХ и системных кодов)
       SELECT 
         "SystemType",
-        -- Очистка ТХ-части (левая сторона)
         REPLACE(REPLACE(REPLACE(TRIM(
           SUBSTRING(
             "Name" FROM "MarkerPos" + (LENGTH("SystemType") + 5) 
             FOR (STRPOS("Name", '_VS_') - ("MarkerPos" + (LENGTH("SystemType") + 5)))
           )
         ), 'ТХ_', ''), 'ТХ-', ''), 'ТХ ', '') AS "PrimaryElement",
-        
-        -- Очистка системной части (правая сторона): удаляем СС_, СС- или СС 
         REGEXP_REPLACE("RawSystemElement", '^(' || "SystemType" || ')(_|\\-| )', '', 'i') AS "CategoryElement",
-        
         "CollisionsAmount"
       FROM LatestData
       WHERE "SystemType" IS NOT NULL
     ),
     MergedData AS (
-      -- 3. Группировка данных
+      -- 4. Группировка
       SELECT 
         "PrimaryElement",
         "CategoryElement",
@@ -704,7 +748,7 @@ async function getThEnDetails() {
       FROM ProcessedData
       GROUP BY "PrimaryElement", "CategoryElement", "SystemType"
     )
-    -- 4. Сборка JSON
+    -- 5. Финальный JSON для фронтенда
     SELECT 
       "PrimaryElement",
       SUM("TotalAmount") as "GroupTotal",
@@ -716,6 +760,7 @@ async function getThEnDetails() {
       ) ORDER BY "TotalAmount" DESC) as "Details"
     FROM MergedData
     GROUP BY "PrimaryElement"
+    HAVING SUM("TotalAmount") > 0
     ORDER BY "GroupTotal" DESC;
   `;
   const { rows } = await currentPool.query(sql);

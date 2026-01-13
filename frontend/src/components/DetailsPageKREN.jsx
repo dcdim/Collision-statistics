@@ -9,7 +9,6 @@ import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import { useNavigate } from 'react-router-dom';
 import DbSelector from './DbSelector';
 
-// Цветовая палитра для инженерных систем
 const systemPalette = {
   'ОВ': '#2196f3', 'ОТ': '#f44336', 'ТС': '#ff9800', 'ХС': '#00bcd4',
   'ИТП': '#673ab7', 'ВК': '#4caf50', 'В': '#8bc34a', 'К': '#795548',
@@ -17,7 +16,6 @@ const systemPalette = {
   'АК': '#607d8b', 'ГПТ': '#3f51b5'
 };
 
-// Склонение "система"
 const getPluralSystems = (count) => {
   const lastDigit = count % 10;
   const lastTwoDigits = count % 100;
@@ -27,7 +25,6 @@ const getPluralSystems = (count) => {
   return 'систем';
 };
 
-// Склонение "категория"
 const getPluralCategory = (count) => {
   const lastDigit = count % 10;
   const lastTwoDigits = count % 100;
@@ -38,12 +35,13 @@ const getPluralCategory = (count) => {
 };
 
 function Row({ row, isOpen, onToggle }) {
-  // Сортировка по системам (алфавит)
   const sortedDetails = useMemo(() => {
-    return row.Details ? [...row.Details].sort((a, b) => 
-      a.system_type.localeCompare(b.system_type)
-    ) : [];
+    return (row.Details || [])
+      .filter(d => d.amount > 0)
+      .sort((a, b) => a.system_type.localeCompare(b.system_type));
   }, [row.Details]);
+
+  if (sortedDetails.length === 0) return null;
 
   const uniqueSystemsCount = new Set(sortedDetails.map(d => d.system_type)).size;
   const totalCategoriesCount = sortedDetails.length;
@@ -62,25 +60,12 @@ function Row({ row, isOpen, onToggle }) {
             </IconButton>
           )}
         </TableCell>
-        
-        {/* Столбец 2: Основной элемент (КР) */}
-        <TableCell width="35%" className="font-weight-600">
-          {row.PrimaryElement}
-        </TableCell>
-        
-        {/* Столбец 3: Системы и категории) */}
+        <TableCell width="35%" className="font-weight-600">{row.PrimaryElement}</TableCell>
         <TableCell width="45%">
           {isSingle ? (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Chip 
-                label={sortedDetails[0].system_type} 
-                size="small" 
-                sx={{ 
-                  bgcolor: systemPalette[sortedDetails[0].system_type] || '#9e9e9e', 
-                  color: 'white', 
-                  fontWeight: 'bold', 
-                  fontSize: '0.7rem' 
-                }} 
+              <Chip label={sortedDetails[0].system_type} size="small" 
+                sx={{ bgcolor: systemPalette[sortedDetails[0].system_type] || '#9e9e9e', color: 'white', fontWeight: 'bold', fontSize: '0.7rem' }} 
               />
               {sortedDetails[0].category_part}
             </Box>
@@ -95,14 +80,9 @@ function Row({ row, isOpen, onToggle }) {
             )
           )}
         </TableCell>
-        
-        {/* Столбец 4: Сумма коллизий */}
-        <TableCell width="15%" align="right" className="font-weight-700">
-          {row.GroupTotal}
-        </TableCell>
+        <TableCell width="15%" align="right" className="font-weight-700">{row.GroupTotal}</TableCell>
       </TableRow>
 
-      {/* Выпадающий список деталей */}
       {!isSingle && (
         <TableRow>
           <TableCell colSpan={4} sx={{ py: 0, px: 0 }}>
@@ -113,29 +93,16 @@ function Row({ row, isOpen, onToggle }) {
                     {sortedDetails.map((detail, idx) => (
                       <TableRow key={idx} className="inner-detail-row">
                         <TableCell width="60px" sx={{ border: 'none' }} />
-                        <TableCell width="35%" sx={{ border: 'none' }}>
-                          {detail.primary_part}
-                        </TableCell>
+                        <TableCell width="35%" sx={{ border: 'none' }}>{detail.primary_part}</TableCell>
                         <TableCell width="45%" sx={{ border: 'none' }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Chip 
-                              label={detail.system_type} 
-                              size="small" 
-                              sx={{ 
-                                bgcolor: systemPalette[detail.system_type] || '#9e9e9e', 
-                                color: 'white', 
-                                fontWeight: 'bold',
-                                fontSize: '0.65rem',
-                                height: '20px',
-                                minWidth: '40px'
-                              }} 
+                            <Chip label={detail.system_type} size="small" 
+                              sx={{ bgcolor: systemPalette[detail.system_type] || '#9e9e9e', color: 'white', fontWeight: 'bold', fontSize: '0.65rem', height: '20px', minWidth: '40px' }} 
                             />
                             <Typography variant="body2">{detail.category_part}</Typography>
                           </Box>
                         </TableCell>
-                        <TableCell width="15%" align="right" sx={{ border: 'none', pr: 4, fontWeight: 600 }}>
-                          {detail.amount}
-                        </TableCell>
+                        <TableCell width="15%" align="right" sx={{ border: 'none', pr: 4, fontWeight: 600 }}>{detail.amount}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -160,11 +127,12 @@ const DetailsPageKREN = () => {
     fetch('/api/details/kren')
       .then(res => res.json())
       .then(json => {
-        setData(Array.isArray(json) ? json : []);
+        const filtered = Array.isArray(json) ? json.filter(r => Number(r.GroupTotal) > 0) : [];
+        setData(filtered);
         setLoading(false);
       })
-      .catch(err => {
-        console.error("Ошибка загрузки:", err);
+      .catch(() => {
+        setData([]);
         setLoading(false);
       });
   };
@@ -172,6 +140,7 @@ const DetailsPageKREN = () => {
   useEffect(() => { loadData(); }, []);
 
   const handleDbChange = async (dbName) => {
+    setLoading(true);
     try {
       await fetch('/api/switch-db', {
         method: 'POST',
@@ -180,26 +149,18 @@ const DetailsPageKREN = () => {
       });
       setOpenRows({});
       loadData();
-    } catch (err) { console.error(err); }
+    } catch (e) { setLoading(false); }
   };
 
-  const grandTotal = data.reduce((sum, row) => sum + Number(row.GroupTotal), 0);
+  const grandTotal = useMemo(() => data.reduce((sum, row) => sum + Number(row.GroupTotal), 0), [data]);
 
   return (
     <div className="details-page-container">
-      {/* Шапка и кнопки управления */}
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button onClick={() => navigate(-1)} className="back-button">
-            ← Назад
-          </Button>
+          <Button onClick={() => navigate(-1)} variant="outlined" className="back-button">← Назад</Button>
           {Object.values(openRows).some(v => v) && (
-            <Button 
-              onClick={() => setOpenRows({})} 
-              variant="outlined" 
-              className="back-button"
-              startIcon={<UnfoldLessIcon />}
-            >
+            <Button onClick={() => setOpenRows({})} variant="outlined" className="back-button" startIcon={<UnfoldLessIcon />}>
               Свернуть всё
             </Button>
           )}
@@ -207,15 +168,17 @@ const DetailsPageKREN = () => {
         <DbSelector onSelect={handleDbChange} />
       </Box>
 
-      <Typography variant="h4" className="details-title">
-        КР — Инженерные системы
-      </Typography>
+      <Typography variant="h4" className="details-title">КР — Инженерные системы</Typography>
 
       {loading ? (
         <Box sx={{ p: 10, textAlign: 'center' }}>
-          <CircularProgress size={45} />
-          <Typography sx={{ mt: 2, color: 'text.secondary' }}>Загрузка инженерных данных...</Typography>
+          <CircularProgress size={45} sx={{ mb: 2 }} />
+          <Typography color="textSecondary">Загрузка инженерных данных...</Typography>
         </Box>
+      ) : data.length === 0 ? (
+        <Paper sx={{ p: 10, textAlign: 'center', borderRadius: '12px' }}>
+          <Typography variant="h5" color="textSecondary" sx={{ fontWeight: 500 }}>Коллизий нет</Typography>
+        </Paper>
       ) : (
         <TableContainer component={Paper} elevation={3} sx={{ borderRadius: '12px', overflow: 'hidden' }}>
           <Table sx={{ tableLayout: 'fixed' }}>
@@ -229,14 +192,8 @@ const DetailsPageKREN = () => {
             </TableHead>
             <TableBody>
               {data.map((row) => (
-                <Row 
-                  key={row.PrimaryElement} 
-                  row={row} 
-                  isOpen={!!openRows[row.PrimaryElement]}
-                  onToggle={() => setOpenRows(prev => ({ 
-                    ...prev, 
-                    [row.PrimaryElement]: !prev[row.PrimaryElement] 
-                  }))}
+                <Row key={row.PrimaryElement} row={row} isOpen={!!openRows[row.PrimaryElement]}
+                  onToggle={() => setOpenRows(prev => ({ ...prev, [row.PrimaryElement]: !prev[row.PrimaryElement] }))}
                 />
               ))}
             </TableBody>
@@ -247,9 +204,7 @@ const DetailsPageKREN = () => {
                   <Typography className="total-label" variant="h6">ИТОГО:</Typography>
                 </TableCell>
                 <TableCell align="right">
-                  <Typography className="total-value" variant="h6">
-                    {grandTotal}
-                  </Typography>
+                  <Typography className="total-value" variant="h6">{grandTotal}</Typography>
                 </TableCell>
               </TableRow>
             </TableFooter>

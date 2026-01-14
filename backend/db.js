@@ -799,6 +799,26 @@ async function getEntriesUpdatesKrDuble() {
   return rows.reverse();
 }
 
+async function getEntriesUpdatesEnDuble() {
+  const sql = `
+    SELECT 
+      eu."UpdateDate", 
+      SUM(eu."CollisionsAmount") AS "CollisionsAmount"
+    FROM "Entries" e
+    JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
+    WHERE e."Name" LIKE '%Дубл%' 
+      AND e."Name" NOT LIKE '%_АР%'
+      AND e."Name" NOT LIKE '%_КР%'
+      AND e."Name" NOT LIKE '%_Другое%'
+      AND e."Name" NOT LIKE '%_COORD%'
+    GROUP BY eu."UpdateDate"
+    ORDER BY eu."UpdateDate" DESC
+    LIMIT 10
+  `;
+  const { rows } = await currentPool.query(sql);
+  return rows.reverse();
+}
+
 async function getEntriesUpdatesEnEn() {
   const sql = `
     SELECT
@@ -898,6 +918,7 @@ module.exports = {
   getEntriesUpdatesThEn,
   getEntriesUpdatesArDuble,
   getEntriesUpdatesKrDuble,
+  getEntriesUpdatesEnDuble,
   getEntriesUpdatesEnEn,
   getArArDetails,
   getArKrDetails,

@@ -134,6 +134,15 @@ app.get('/api/comparison/krduble', async (req, res) => {
   }
 });
 
+app.get('/api/comparison/enduble', async (req, res) => {
+  try {
+    const entriesUpdates = await db.getEntriesUpdatesEnDuble();
+    res.json(entriesUpdates);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/comparison/enen', async (req, res) => {
   try {
     const entriesUpdates = await db.getEntriesUpdatesEnEn();

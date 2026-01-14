@@ -40,6 +40,7 @@
   transition: transform 0.2s ease;
   display: flex;
   flex-direction: column;
+  height: 450px;
 }
 
 .chart-card:hover {
@@ -65,6 +66,11 @@
   margin-top: 15px;
   text-transform: none;
   font-weight: 600;
+}
+
+.button-spacer {
+  height: 30.75px; /* Высота кнопки Mui Button size="small" */
+  margin-top: 15px; /* Соответствует margin-топу кнопки в ваших стилях */
 }
 
 /* СТРАНИЦА ДЕТАЛЕЙ (ОБЩЕЕ) */

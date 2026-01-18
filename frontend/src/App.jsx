@@ -29,6 +29,7 @@ import DetailsPageAREN from './components/DetailsPageAREN';
 import DetailsPageKREN from './components/DetailsPageKREN';
 import DetailsPageTHEN from './components/DetailsPageTHEN';
 import DetailsPageENEN from './components/DetailsPageENEN';
+import DetailsPageENDUBLE from './components/DetailsPageENDUBLE';
 
 import Button from '@mui/material/Button';
 
@@ -147,7 +148,7 @@ function App() {
                       <div className="chart-wrapper">
                         {chartDataENDUBLE.length > 0 && <BarChartENDUBLE data={chartDataENDUBLE} />}
                       </div>
-                      <div className="button-spacer"></div>
+                      <Button component={Link} to="/details/enduble" variant="outlined" size="small">Подробнее</Button>
                     </div>
                   </td>
 
@@ -218,6 +219,7 @@ function App() {
         <Route path="/details/kren" element={<DetailsPageKREN />} />
         <Route path="/details/then" element={<DetailsPageTHEN />} />
         <Route path="/details/enen" element={<DetailsPageENEN />} />
+        <Route path="/details/enduble" element={<DetailsPageENDUBLE />} />
       </Routes>
     </div>
   );

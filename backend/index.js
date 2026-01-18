@@ -1,4 +1,3 @@
-// backend/index.js
 const express = require('express');
 const cors = require('cors');
 const db = require('./db');
@@ -246,6 +245,16 @@ app.get('/api/details/then', async (req, res) => {
 app.get('/api/details/enen', async (req, res) => {
   try {
     const details = await db.getEnEnDetails();
+    res.json(details || []); 
+  } catch (err) {
+    console.error('Ошибка при получении деталей ИС-ИС:', err);
+    res.status(500).json({ error: 'Ошибка базы данных', message: err.message });
+  }
+});
+
+app.get('/api/details/enduble', async (req, res) => {
+  try {
+    const details = await db.getEnDubleDetails();
     res.json(details || []); 
   } catch (err) {
     console.error('Ошибка при получении деталей ИС-ИС:', err);

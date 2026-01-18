@@ -227,7 +227,7 @@ const DetailsPageENEN = () => {
       </Box>
 
       <Typography variant="h4" className="details-title">
-        Инженерные системы — Инженерные системы
+        Детализация коллизий: ИС-ИС
       </Typography>
 
       {loading ? (

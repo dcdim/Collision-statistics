@@ -178,7 +178,7 @@ const DetailsPageAREN = () => {
         <DbSelector onSelect={handleDbChange} />
       </Box>
 
-      <Typography variant="h4" className="details-title">АР — Инженерные системы</Typography>
+      <Typography variant="h4" className="details-title">Детализация коллизий: АР-ИС</Typography>
 
       {loading ? (
         <Box sx={{ p: 10, textAlign: 'center' }}>

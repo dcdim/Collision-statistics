@@ -168,7 +168,7 @@ const DetailsPageTHEN = () => {
         <DbSelector onSelect={handleDbChange} />
       </Box>
 
-      <Typography variant="h4" className="details-title">ТХ — Инженерные системы</Typography>
+      <Typography variant="h4" className="details-title">Детализация коллизий: ТХ-ИС</Typography>
 
       {loading ? (
         <Box sx={{ p: 10, textAlign: 'center' }}>

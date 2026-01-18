@@ -819,6 +819,29 @@ async function getEntriesUpdatesEnDuble() {
   return rows.reverse();
 }
 
+async function getEnDubleDetails() {
+  const sql = `
+    WITH LastUpdate AS (
+      SELECT MAX("UpdateDate") as MaxDate FROM "EntriesUpdates"
+    )
+    SELECT 
+      e."Name", 
+      eu."CollisionsAmount"
+    FROM "Entries" e
+    JOIN "EntriesUpdates" eu ON e."ID" = eu."EntryId"
+    JOIN LastUpdate lu ON eu."UpdateDate" = lu.MaxDate
+    WHERE e."Name" LIKE '000_Дубл_%' 
+      AND e."Name" NOT LIKE '%_АР%'
+      AND e."Name" NOT LIKE '%_КР%'
+      AND e."Name" NOT LIKE '%_COORD%'
+      AND e."Name" NOT LIKE '%_Другое%'
+      AND eu."CollisionsAmount" > 0
+    ORDER BY eu."CollisionsAmount" DESC;
+  `;
+  const { rows } = await currentPool.query(sql);
+  return rows;
+}
+
 async function getEntriesUpdatesEnEn() {
   const sql = `
     SELECT
@@ -930,4 +953,5 @@ module.exports = {
   getKrEnDetails,
   getThEnDetails,
   getEnEnDetails,
+  getEnDubleDetails,
 };

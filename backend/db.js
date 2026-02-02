@@ -31,6 +31,42 @@ async function getEntries() {
   return rows;
 }
 
+async function getTotalCollisions() {
+  const sql = `
+    SELECT SUM("CollisionsAmount") AS "total"
+    FROM "EntriesUpdates"
+    WHERE "UpdateDate" = (SELECT MAX("UpdateDate") FROM "EntriesUpdates");
+  `;
+  const { rows } = await currentPool.query(sql);
+  return rows[0].total || 0;
+}
+
+async function getTotalStats() {
+  const sql = `
+    WITH LastTwoDates AS (
+      SELECT DISTINCT "UpdateDate"
+      FROM "EntriesUpdates"
+      ORDER BY "UpdateDate" DESC
+      LIMIT 2
+    ),
+    DailyTotals AS (
+      SELECT "UpdateDate", SUM("CollisionsAmount") as daily_sum
+      FROM "EntriesUpdates"
+      WHERE "UpdateDate" IN (SELECT "UpdateDate" FROM LastTwoDates)
+      GROUP BY "UpdateDate"
+    )
+    SELECT * FROM DailyTotals ORDER BY "UpdateDate" DESC;
+  `;
+  
+  const { rows } = await currentPool.query(sql);
+  
+  const currentTotal = rows[0] ? parseInt(rows[0].daily_sum) : 0;
+  const previousTotal = rows[1] ? parseInt(rows[1].daily_sum) : currentTotal;
+  const delta = currentTotal - previousTotal;
+
+  return { total: currentTotal, delta: delta };
+}
+
 async function getEntriesUpdatesArKr() {
   const sql = `
     SELECT
@@ -954,4 +990,6 @@ module.exports = {
   getThEnDetails,
   getEnEnDetails,
   getEnDubleDetails,
+  getTotalCollisions,
+  getTotalStats,
 };

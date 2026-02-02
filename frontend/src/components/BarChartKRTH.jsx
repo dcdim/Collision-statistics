@@ -39,7 +39,7 @@ function BarChartKRTH({ data }) {
     },
     scales: {
       x: { title: { display: true, text: 'Дата обновления' } },
-      y: { title: { display: true, text: 'Коллизии' }, beginAtZero: true },
+      y: { title: { display: true, text: 'Коллизии (шт.)' }, beginAtZero: true },
     },
   };
 

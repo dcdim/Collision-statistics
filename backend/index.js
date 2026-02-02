@@ -25,6 +25,24 @@ app.post('/api/switch-db', (req, res) => {
   res.json({ ok: true, dbName });
 });
 
+app.get('/api/total-collisions', async (req, res) => {
+  try {
+    const total = await db.getTotalCollisions();
+    res.json({ total });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/total-stats', async (req, res) => {
+  try {
+    const stats = await db.getTotalStats();
+    res.json(stats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/entries', async (req, res) => {
   try {
     const entries = await db.getEntries();

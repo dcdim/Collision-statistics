@@ -1,9 +1,10 @@
 import './App.css';
 import { Routes, Route, Link } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
-import DbSelector from './components/DbSelector';
+import { Box, Typography, Button } from '@mui/material';
 
-// Импорт компонентов графиков
+// Импорт компонентов
+import DbSelector from './components/DbSelector';
 import BarChartARKR from './components/BarChartARKR';
 import BarChartARAR from './components/BarChartARAR';
 import BarChartARTH from './components/BarChartARTH';
@@ -15,10 +16,10 @@ import BarChartKREN from './components/BarChartKREN';
 import BarChartTHEN from './components/BarChartTHEN';
 import BarChartARDUBLE from './components/BarChartARDUBLE';
 import BarChartKRDUBLE from './components/BarChartKRDUBLE';
-import BarChartENDUBLE from './components/BarChartENDUBLE'; // График ИС
+import BarChartENDUBLE from './components/BarChartENDUBLE';
 import BarChartENEN from './components/BarChartENEN';
 
-// Импорт страниц детализации
+// Страницы деталей
 import DetailsPageARAR from './components/DetailsPageARAR';
 import DetailsPageARKR from './components/DetailsPageARKR';
 import DetailsPageARTH from './components/DetailsPageARTH';
@@ -31,12 +32,8 @@ import DetailsPageTHEN from './components/DetailsPageTHEN';
 import DetailsPageENEN from './components/DetailsPageENEN';
 import DetailsPageENDUBLE from './components/DetailsPageENDUBLE';
 
-import Button from '@mui/material/Button';
-
 function App() {
-  const [entries, setEntries] = useState([]);
-  
-  // Состояния данных
+  const [totalData, setTotalData] = useState({ total: 0, delta: 0 });
   const [chartDataARKR, setChartDataARKR] = useState([]);
   const [chartDataARAR, setChartDataARAR] = useState([]);
   const [chartDataARTH, setChartDataARTH] = useState([]);
@@ -52,8 +49,12 @@ function App() {
   const [chartDataENEN, setChartDataENEN] = useState([]);
 
   const reloadAllData = () => {
-    fetch('/api/entries').then(res => res.json()).then(data => setEntries(data));
+    // Загрузка статистики
+    fetch('/api/total-stats')
+      .then(res => res.json())
+      .then(data => setTotalData(data));
 
+    // Загрузка графиков
     const endpoints = [
       ['', setChartDataARKR], ['arar', setChartDataARAR], ['arth', setChartDataARTH],
       ['krkr', setChartDataKRKR], ['krth', setChartDataKRTH], ['thth', setChartDataTHTH],
@@ -80,18 +81,33 @@ function App() {
     reloadAllData();
   };
 
+  const renderDelta = (delta) => {
+    if (delta === 0) return null;
+    const isPositive = delta > 0;
+    const deltaClass = isPositive ? 'delta-badge delta-plus' : 'delta-badge delta-minus';
+    const sign = isPositive ? '+' : '';
+    return <span className={deltaClass}>({sign}{delta})</span>;
+  };
+
   return (
     <div className="app-container">
       <Routes>
         <Route path="/" element={
           <>
-            <h1 className="app-title">Мониторинг коллизий</h1>
-            <DbSelector onSelect={handleDbChange} />
+            <h1 className="app-title-main">Мониторинг коллизий</h1>
             
+            <div className="header-panel">
+              <Typography variant="h6" className="stats-container">
+                <span className="stats-label">Всего коллизий по последней проверке:</span>
+                <span className="stats-count">{totalData.total}</span>
+                {renderDelta(totalData.delta)}
+              </Typography>
+              <DbSelector onSelect={handleDbChange} />
+            </div>
+
             <table className="charts-table">
               <tbody>
                 <tr>
-                  {/* Левая колонка */}
                   <td className="charts-column">
                     <div className="chart-card">
                       <h2>АР-АР</h2>
@@ -133,7 +149,6 @@ function App() {
                       <Button component={Link} to="/details/then" variant="outlined" size="small">Подробнее</Button>
                     </div>
 
-                    {/* Дубляж АР */}
                     <div className="chart-card">
                       <h2>Дубляж АР</h2>
                       <div className="chart-wrapper">
@@ -142,7 +157,6 @@ function App() {
                       <div className="button-spacer"></div>
                     </div>
 
-                    {/* Дубляж ИС */}
                     <div className="chart-card">
                       <h2>Дубляж ИС</h2>
                       <div className="chart-wrapper">
@@ -152,7 +166,6 @@ function App() {
                     </div>
                   </td>
 
-                  {/* Правая колонка */}
                   <td className="charts-column">
                     <div className="chart-card">
                       <h2>АР-КР</h2>
@@ -194,7 +207,6 @@ function App() {
                       <Button component={Link} to="/details/thth" variant="outlined" size="small">Подробнее</Button>
                     </div>
 
-                    {/* Дубляж КР */}
                     <div className="chart-card">
                       <h2>Дубляж КР</h2>
                       <div className="chart-wrapper">

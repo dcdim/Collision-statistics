@@ -69,8 +69,8 @@
 }
 
 .button-spacer {
-  height: 30.75px; /* Высота кнопки Mui Button size="small" */
-  margin-top: 15px; /* Соответствует margin-топу кнопки в ваших стилях */
+  height: 30.75px;
+  margin-top: 15px;
 }
 
 /* СТРАНИЦА ДЕТАЛЕЙ (ОБЩЕЕ) */
@@ -206,4 +206,56 @@
   .details-page-container {
     padding: 20px 10px;
   }
+}
+
+/* ПАНЕЛЬ СТАТИСТИКИ И УПРАВЛЕНИЯ */
+.header-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  background-color: rgba(0, 0, 0, 0.03);
+  padding: 15px 25px;
+  border-radius: 12px;
+}
+
+.stats-container {
+  display: flex;
+  align-items: center;
+}
+
+.stats-label {
+  color: #666;
+  font-size: 1.2rem;
+  font-weight: 400;
+  margin-right: 12px;
+}
+
+.stats-count {
+  color: #333;
+  font-weight: 800;
+  font-size: 1.3rem;
+}
+
+/* ИНДИКАЦИЯ ПРОГРЕССА (ДЕЛЬТА) */
+.delta-badge {
+  font-weight: 700;
+  margin-left: 8px;
+  font-size: 1.2rem;
+}
+
+.delta-plus {
+  color: #d32f2f; /* Красный - коллизий стало больше */
+}
+
+.delta-minus {
+  color: #2e7d32; /* Зеленый - коллизий стало меньше */
+}
+
+/* Заголовок главной страницы */
+.app-title-main {
+  text-align: center;
+  color: #2c3e50;
+  font-weight: 700;
+  margin-bottom: 20px;
 }

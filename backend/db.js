@@ -18,14 +18,21 @@ function setDb(name) {
   console.log('Switched to DB:', name, '→', DB_CONFIGS[name]);
 }
 
-// инициализация дефолтной БД при старте
-setDb(Object.keys(DB_CONFIGS)[0]);
+// Инициализация первой доступной БД при запуске
+if (Object.keys(DB_CONFIGS).length > 0) {
+  setDb(Object.keys(DB_CONFIGS)[0]);
+}
+
+// Вспомогательная функция для выполнения запросов к текущей БД
+async function query(sql, params) {
+  return await currentPool.query(sql, params);
+}
 
 async function getEntries() {
   const sql = `
-    SELECT "ID", "Name"
-    FROM "Entries"
-    ORDER BY "ID"
+  SELECT "ID", "Name"
+  FROM "Entries"
+  ORDER BY "ID"
   `;
   const { rows } = await currentPool.query(sql);
   return rows;
@@ -33,9 +40,9 @@ async function getEntries() {
 
 async function getTotalCollisions() {
   const sql = `
-    SELECT SUM("CollisionsAmount") AS "total"
-    FROM "EntriesUpdates"
-    WHERE "UpdateDate" = (SELECT MAX("UpdateDate") FROM "EntriesUpdates");
+  SELECT SUM("CollisionsAmount") AS "total"
+  FROM "EntriesUpdates"
+  WHERE "UpdateDate" = (SELECT MAX("UpdateDate") FROM "EntriesUpdates");
   `;
   const { rows } = await currentPool.query(sql);
   return rows[0].total || 0;
@@ -66,6 +73,99 @@ async function getTotalStats() {
 
   return { total: currentTotal, delta: delta };
 }
+
+async function getTotalCollisionsByProject(dbNames) {
+  let totalSum = 0;
+  
+  for (const dbName of dbNames) {
+    try {
+      // Используем существующий пул из объекта pools, который создается в setDb
+      // Если пула нет, временно создаем его
+      if (!pools[dbName]) {
+        await setDb(dbName);
+      }
+      
+      const pool = pools[dbName];
+      const sql = `
+      SELECT SUM("CollisionsAmount") AS "total"
+        FROM "EntriesUpdates"
+        WHERE "UpdateDate" = (SELECT MAX("UpdateDate") FROM "EntriesUpdates");
+      `;
+      
+      const { rows } = await pool.query(sql);
+      const dbTotal = parseInt(rows[0].total) || 0;
+      totalSum += dbTotal;
+    } catch (err) {
+      console.error(`Ошибка при подсчете суммы для БД ${dbName}:`, err.message);
+      // Если по одной БД ошибка, продолжаем считать остальные
+    }
+  }
+  
+  return totalSum;
+}
+
+// В файл db.js
+
+async function getProjectTotalWithDelta(dbNames) {
+  let totalCurrent = 0;
+  let totalPrevious = 0;
+
+  for (const dbName of dbNames) {
+    try {
+      // 1. Убеждаемся, что пул для этой БД создан
+      // В вашем db.js функция setDb создает пул и кладет его в объект pools[dbName]
+      if (!pools[dbName]) {
+        await setDb(dbName);
+      }
+      
+      const pool = pools[dbName];
+      if (!pool) {
+        console.warn(`Пул для базы ${dbName} не найден, пропускаем...`);
+        continue;
+      }
+
+      // 2. SQL запрос (тот же, проверенный)
+      const sql = `
+        WITH LastTwoDates AS (
+          SELECT DISTINCT "UpdateDate"
+          FROM "EntriesUpdates"
+          ORDER BY "UpdateDate" DESC
+          LIMIT 2
+        ),
+        DailyTotals AS (
+          SELECT "UpdateDate", SUM("CollisionsAmount") as daily_sum
+          FROM "EntriesUpdates"
+          WHERE "UpdateDate" IN (SELECT "UpdateDate" FROM LastTwoDates)
+          GROUP BY "UpdateDate"
+        )
+        SELECT "UpdateDate", daily_sum FROM DailyTotals ORDER BY "UpdateDate" DESC;
+      `;
+
+      const { rows } = await pool.query(sql);
+
+      if (rows && rows.length > 0) {
+        // Текущее значение (самая свежая дата)
+        const current = rows[0].daily_sum ? parseInt(rows[0].daily_sum, 10) : 0;
+        
+        // Предыдущее значение (если дат меньше двух, берем текущее, чтобы дельта была 0)
+        const previous = rows[1] ? parseInt(rows[1].daily_sum, 10) : current;
+
+        totalCurrent += current;
+        totalPrevious += previous;
+        
+        console.log(`Проектная отладка [${dbName}]: Тек=${current}, Пред=${previous}`);
+      }
+    } catch (err) {
+      console.error(`Ошибка при обработке базы ${dbName}:`, err.message);
+    }
+  }
+
+  return { 
+    total: totalCurrent, 
+    delta: totalCurrent - totalPrevious 
+  };
+}
+
 
 async function getEntriesUpdatesArKr() {
   const sql = `
@@ -991,5 +1091,7 @@ module.exports = {
   getEnEnDetails,
   getEnDubleDetails,
   getTotalCollisions,
+  getTotalCollisionsByProject,
+  getProjectTotalWithDelta,
   getTotalStats,
 };

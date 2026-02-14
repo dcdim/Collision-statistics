@@ -6,7 +6,7 @@ import {
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import DbSelector from './DbSelector';
 
 const getPluralCategory = (count) => {
@@ -45,7 +45,11 @@ function Row({ row, isOpen, onToggle }) {
         </TableCell>
         <TableCell width="35%" className="font-weight-600">{row.PrimaryElement}</TableCell>
         <TableCell width="45%">
-          {isSingle ? singleDetail.category_part : (!isOpen ? `${detailsCount} ${getPluralCategory(detailsCount)}` : "")}
+          {isSingle ? (
+            singleDetail.category_part
+          ) : (
+            !isOpen ? `${detailsCount} ${getPluralCategory(detailsCount)}` : ""
+          )}
         </TableCell>
         <TableCell width="15%" align="right" className="font-weight-700">{row.GroupTotal}</TableCell>
       </TableRow>
@@ -77,7 +81,9 @@ function Row({ row, isOpen, onToggle }) {
 }
 
 const DetailsPageKRKR = () => {
+  const { projectId } = useParams();
   const [data, setData] = useState([]);
+  const [dbList, setDbList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({}); 
   const navigate = useNavigate();
@@ -97,7 +103,35 @@ const DetailsPageKRKR = () => {
       });
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    const initPage = async () => {
+      setLoading(true);
+      try {
+        // 1. Получаем список БД для текущего проекта
+        const res = await fetch(`/api/databases/${projectId}`);
+        const dbs = await res.json();
+        setDbList(dbs);
+
+        if (dbs.length > 0) {
+          // 2. Инициализируем серверную сессию первой БД из списка
+          await fetch('/api/switch-db', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dbName: dbs[0] }),
+          });
+          // 3. Загружаем коллизии
+          loadData();
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Ошибка инициализации КР-КР:", err);
+        setLoading(false);
+      }
+    };
+
+    if (projectId) initPage();
+  }, [projectId]);
 
   const handleDbChange = async (dbName) => {
     setLoading(true);
@@ -127,15 +161,17 @@ const DetailsPageKRKR = () => {
             </Button>
           )}
         </Box>
-        <DbSelector onSelect={handleDbChange} />
+        <DbSelector dbList={dbList} onSelect={handleDbChange} />
       </Box>
 
-      <Typography variant="h4" className="details-title">Детализация коллизий: КР-КР</Typography>
+      <Typography variant="h4" className="details-title">
+        Объект {projectId}: Детализация КР-КР
+      </Typography>
       
       {loading ? (
         <Box sx={{ p: 10, textAlign: 'center' }}>
           <CircularProgress size={40} sx={{ mb: 2 }} />
-          <Typography variant="h6" color="textSecondary">Обновление КР-КР...</Typography>
+          <Typography variant="h6" color="textSecondary">Загрузка данных КР-КР...</Typography>
         </Box>
       ) : data.length === 0 ? (
         <Paper sx={{ p: 10, textAlign: 'center', borderRadius: '12px' }}>

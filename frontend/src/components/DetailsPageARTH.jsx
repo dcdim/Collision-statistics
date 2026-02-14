@@ -6,7 +6,7 @@ import {
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import DbSelector from './DbSelector';
 
 const getPluralCategory = (count) => {
@@ -19,7 +19,6 @@ const getPluralCategory = (count) => {
 };
 
 function Row({ row, isOpen, onToggle }) {
-  // Фильтруем детали, чтобы исключить строки с 0 (на всякий случай)
   const validDetails = useMemo(() => 
     (row.Details || []).filter(d => d.amount > 0), 
     [row.Details]
@@ -82,7 +81,9 @@ function Row({ row, isOpen, onToggle }) {
 }
 
 const DetailsPageARTH = () => {
+  const { projectId } = useParams();
   const [data, setData] = useState([]);
+  const [dbList, setDbList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({}); 
   const navigate = useNavigate();
@@ -92,7 +93,6 @@ const DetailsPageARTH = () => {
     fetch('/api/details/arth')
       .then(res => res.json())
       .then(json => {
-        // Фильтруем данные, оставляя только те, где GroupTotal > 0
         const filteredData = Array.isArray(json) ? json.filter(r => Number(r.GroupTotal) > 0) : [];
         setData(filteredData);
         setLoading(false);
@@ -103,7 +103,35 @@ const DetailsPageARTH = () => {
       });
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    const initPage = async () => {
+      setLoading(true);
+      try {
+        // 1. Получаем список баз данных для проекта
+        const res = await fetch(`/api/databases/${projectId}`);
+        const dbs = await res.json();
+        setDbList(dbs);
+
+        if (dbs.length > 0) {
+          // 2. Устанавливаем текущую БД на сервере (первую из списка)
+          await fetch('/api/switch-db', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dbName: dbs[0] }),
+          });
+          // 3. Грузим данные только после подтверждения переключения
+          loadData();
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Ошибка инициализации AR-TX:", err);
+        setLoading(false);
+      }
+    };
+
+    if (projectId) initPage();
+  }, [projectId]);
 
   const handleDbChange = async (dbName) => {
     setLoading(true);
@@ -136,20 +164,22 @@ const DetailsPageARTH = () => {
             </Button>
           )}
         </Box>
-        <DbSelector onSelect={handleDbChange} />
+        <DbSelector dbList={dbList} onSelect={handleDbChange} />
       </Box>
 
-      <Typography variant="h4" className="details-title">Детализация коллизий: АР-ТХ</Typography>
+      <Typography variant="h4" className="details-title">
+        Объект {projectId}: Детализация АР-ТХ
+      </Typography>
       
       {loading ? (
         <Box sx={{ p: 8, textAlign: 'center' }}>
           <CircularProgress size={40} sx={{ mb: 2 }} />
-          <Typography variant="h6" color="textSecondary">Загрузка данных АР-ТХ...</Typography>
+          <Typography variant="h6" color="textSecondary">Загрузка данных...</Typography>
         </Box>
       ) : data.length === 0 ? (
         <Paper sx={{ p: 10, textAlign: 'center', borderRadius: '12px' }}>
           <Typography variant="h5" color="textSecondary" sx={{ fontWeight: 500 }}>
-            Коллизий нет
+            Коллизий не обнаружено
           </Typography>
         </Paper>
       ) : (

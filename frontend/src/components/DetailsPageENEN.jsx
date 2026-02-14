@@ -6,7 +6,7 @@ import {
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import DbSelector from './DbSelector';
 
 // Цветовая схема для чипов систем
@@ -17,7 +17,7 @@ const systemPalette = {
   'АК': '#607d8b', 'ГПТ': '#3f51b5'
 };
 
-// Словарь для перевода кодов в названия для сортировки и отображения
+// Словарь для перевода кодов
 const systemFullNames = {
   'ОВ': 'Вентиляция',
   'ОТ': 'Отопление',
@@ -35,7 +35,6 @@ const systemFullNames = {
   'ГПТ': 'Газовое пожаротушение'
 };
 
-// Хелперы для текстов
 const getPluralSystems = (count) => {
   const lastDigit = count % 10;
   const lastTwoDigits = count % 100;
@@ -73,11 +72,9 @@ function Row({ row, isOpen, onToggle }) {
             </IconButton>
           )}
         </TableCell>
-        
         <TableCell width="35%" className="font-weight-600">
           {systemFullNames[row.PrimaryElement] || row.PrimaryElement}
         </TableCell>
-        
         <TableCell width="45%">
           {isSingle ? (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -99,10 +96,7 @@ function Row({ row, isOpen, onToggle }) {
             )
           )}
         </TableCell>
-        
-        <TableCell width="15%" align="right" className="font-weight-700">
-          {row.GroupTotal}
-        </TableCell>
+        <TableCell width="15%" align="right" className="font-weight-700">{row.GroupTotal}</TableCell>
       </TableRow>
 
       {!isSingle && (
@@ -149,12 +143,13 @@ function Row({ row, isOpen, onToggle }) {
 }
 
 const DetailsPageENEN = () => {
+  const { projectId } = useParams();
   const [data, setData] = useState([]);
+  const [dbList, setDbList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({});
   const navigate = useNavigate();
 
-  // Основная функция загрузки
   const loadData = () => {
     setLoading(true);
     fetch('/api/details/enen')
@@ -164,37 +159,57 @@ const DetailsPageENEN = () => {
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Ошибка загрузки:", err);
+        console.error("Ошибка загрузки данных ИС-ИС:", err);
         setLoading(false);
       });
   };
 
-  // Вызов при монтировании
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    const initPage = async () => {
+      setLoading(true);
+      try {
+        // 1. Получаем список БД именно для этого проекта
+        const res = await fetch(`/api/databases/${projectId}`);
+        const dbs = await res.json();
+        setDbList(dbs);
+
+        if (dbs.length > 0) {
+          // 2. Инициализируем сессию сервера первой БД
+          await fetch('/api/switch-db', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dbName: dbs[0] }),
+          });
+          // 3. Загружаем данные
+          loadData();
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Ошибка инициализации:", err);
+        setLoading(false);
+      }
+    };
+
+    if (projectId) initPage();
+  }, [projectId]);
 
   const handleDbChange = async (dbName) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/switch-db', {
+      await fetch('/api/switch-db', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dbName }),
       });
-
-      if (response.ok) {
-        setOpenRows({}); // Сбросить раскрытые строки при смене базы
-        loadData();      // Перезагрузить данные из новой базы
-      } else {
-        console.error("Ошибка переключения БД на сервере");
-        setLoading(false);
-      }
+      setOpenRows({});
+      loadData();
     } catch (err) {
-      console.error("Ошибка сетевого запроса:", err);
+      console.error(err);
       setLoading(false);
     }
   };
 
-  // Сортировка по алфавиту расшифровок
   const sortedData = useMemo(() => {
     return [...data].sort((a, b) => {
       const nameA = systemFullNames[a.PrimaryElement] || a.PrimaryElement;
@@ -211,7 +226,7 @@ const DetailsPageENEN = () => {
     <div className="details-page-container">
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button onClick={() => navigate(-1)} className="back-button">← Назад</Button>
+          <Button onClick={() => navigate(-1)} variant="outlined" className="back-button">← Назад</Button>
           {Object.values(openRows).some(v => v) && (
             <Button 
               onClick={() => setOpenRows({})} 
@@ -223,11 +238,11 @@ const DetailsPageENEN = () => {
             </Button>
           )}
         </Box>
-        <DbSelector onSelect={handleDbChange} />
+        <DbSelector dbList={dbList} onSelect={handleDbChange} />
       </Box>
 
       <Typography variant="h4" className="details-title">
-        Детализация коллизий: ИС-ИС
+        Объект {projectId}: Детализация ИС-ИС
       </Typography>
 
       {loading ? (

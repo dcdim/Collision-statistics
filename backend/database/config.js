@@ -44,6 +44,27 @@ module.exports = {
       password: process.env.DB_PASSWORD,
       database: '278_DB_L82-L89',
     },
+    '296_DB_All': {
+      host: process.env.DB_HOST,
+      port: process.env.DB_PORT,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: '296_DB',
+    },
+    '297_DB_All': {
+      host: process.env.DB_HOST,
+      port: process.env.DB_PORT,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: '297_DB',
+    },
+    '303_DB_All': {
+      host: process.env.DB_HOST,
+      port: process.env.DB_PORT,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: '303_DB',
+    },
   },
 };
 

@@ -6,7 +6,7 @@ import {
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import DbSelector from './DbSelector';
 
 const getPluralCategory = (count) => {
@@ -72,7 +72,9 @@ function Row({ row, isOpen, onToggle }) {
 }
 
 const DetailsPageTHTH = () => {
+  const { projectId } = useParams();
   const [data, setData] = useState([]);
+  const [dbList, setDbList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({}); 
   const navigate = useNavigate();
@@ -92,7 +94,35 @@ const DetailsPageTHTH = () => {
       });
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    const initPage = async () => {
+      setLoading(true);
+      try {
+        // 1. Получаем список БД для проекта
+        const res = await fetch(`/api/databases/${projectId}`);
+        const dbs = await res.json();
+        setDbList(dbs);
+
+        if (dbs.length > 0) {
+          // 2. Устанавливаем первую БД в сессию сервера
+          await fetch('/api/switch-db', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dbName: dbs[0] }),
+          });
+          // 3. Загружаем данные
+          loadData();
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Ошибка инициализации ТХ-ТХ:", err);
+        setLoading(false);
+      }
+    };
+
+    if (projectId) initPage();
+  }, [projectId]);
 
   const handleDbChange = async (dbName) => {
     setLoading(true);
@@ -122,10 +152,12 @@ const DetailsPageTHTH = () => {
             </Button>
           )}
         </Box>
-        <DbSelector onSelect={handleDbChange} />
+        <DbSelector dbList={dbList} onSelect={handleDbChange} />
       </Box>
 
-      <Typography variant="h4" className="details-title">Детализация коллизий: ТХ-ТХ</Typography>
+      <Typography variant="h4" className="details-title">
+        Объект {projectId}: Детализация ТХ-ТХ
+      </Typography>
       
       {loading ? (
         <Box sx={{ p: 10, textAlign: 'center' }}>

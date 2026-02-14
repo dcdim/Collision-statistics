@@ -6,7 +6,7 @@ import {
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import DbSelector from './DbSelector';
 
 const getPluralCategory = (count) => {
@@ -81,7 +81,9 @@ function Row({ row, isOpen, onToggle }) {
 }
 
 const DetailsPageARKR = () => {
+  const { projectId } = useParams();
   const [data, setData] = useState([]);
+  const [dbList, setDbList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({}); 
   const navigate = useNavigate();
@@ -91,7 +93,6 @@ const DetailsPageARKR = () => {
     fetch('/api/details/arkr')
       .then(res => res.json())
       .then(json => {
-        // Оставляем только те группы, где сумма коллизий реально больше нуля
         const filtered = Array.isArray(json) ? json.filter(r => Number(r.GroupTotal) > 0) : [];
         setData(filtered);
         setLoading(false);
@@ -103,20 +104,45 @@ const DetailsPageARKR = () => {
       });
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    const initPage = async () => {
+      setLoading(true);
+      try {
+        // Загружаем список БД для конкретного проекта
+        const res = await fetch(`/api/databases/${projectId}`);
+        const dbs = await res.json();
+        setDbList(dbs);
+
+        if (dbs.length > 0) {
+          // Принудительно переключаем сервер на нужную БД перед загрузкой данных
+          await fetch('/api/switch-db', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dbName: dbs[0] }),
+          });
+          loadData();
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Ошибка инициализации деталей АР-КР:", err);
+        setLoading(false);
+      }
+    };
+
+    if (projectId) initPage();
+  }, [projectId]);
 
   const handleDbChange = async (dbName) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/switch-db', {
+      await fetch('/api/switch-db', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dbName }),
       });
-      if (response.ok) {
-        setOpenRows({});
-        loadData();
-      }
+      setOpenRows({});
+      loadData();
     } catch (err) {
       console.error("Ошибка при смене БД:", err);
       setLoading(false);
@@ -131,36 +157,29 @@ const DetailsPageARKR = () => {
     <div className="details-page-container">
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button onClick={() => navigate(-1)} variant="outlined" className="back-button">
-            ← Назад
-          </Button>
+          <Button onClick={() => navigate(-1)} variant="outlined" className="back-button">← Назад</Button>
           {Object.values(openRows).some(v => v) && (
-            <Button 
-              onClick={() => setOpenRows({})} 
-              variant="outlined" 
-              className="back-button" 
-              startIcon={<UnfoldLessIcon />}
-            >
+            <Button onClick={() => setOpenRows({})} variant="outlined" className="back-button" startIcon={<UnfoldLessIcon />}>
               Свернуть всё
             </Button>
           )}
         </Box>
-        <DbSelector onSelect={handleDbChange} />
+        <DbSelector dbList={dbList} onSelect={handleDbChange} />
       </Box>
 
       <Typography variant="h4" className="details-title">
-        Детализация коллизий: АР-КР
+        Объект {projectId}: Детализация АР-КР
       </Typography>
       
       {loading ? (
         <Box sx={{ p: 8, textAlign: 'center' }}>
           <CircularProgress size={40} sx={{ mb: 2 }} />
-          <Typography variant="h6" color="textSecondary">Загрузка данных АР-КР...</Typography>
+          <Typography variant="h6" color="textSecondary">Загрузка данных...</Typography>
         </Box>
       ) : data.length === 0 ? (
         <Paper sx={{ p: 10, textAlign: 'center', borderRadius: '12px' }}>
           <Typography variant="h5" color="textSecondary" sx={{ fontWeight: 500 }}>
-            Коллизий нет
+            Коллизий не обнаружено
           </Typography>
         </Paper>
       ) : (
@@ -180,10 +199,7 @@ const DetailsPageARKR = () => {
                   key={row.PrimaryElement} 
                   row={row} 
                   isOpen={!!openRows[row.PrimaryElement]}
-                  onToggle={() => setOpenRows(prev => ({ 
-                    ...prev, 
-                    [row.PrimaryElement]: !prev[row.PrimaryElement] 
-                  }))}
+                  onToggle={() => setOpenRows(prev => ({ ...prev, [row.PrimaryElement]: !prev[row.PrimaryElement] }))}
                 />
               ))}
             </TableBody>

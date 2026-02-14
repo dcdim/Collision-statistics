@@ -211,12 +211,10 @@
 /* ПАНЕЛЬ СТАТИСТИКИ И УПРАВЛЕНИЯ */
 .header-panel {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 16px;
+  width: 100%;
   margin-bottom: 32px;
-  background-color: rgba(0, 0, 0, 0.03);
-  padding: 15px 25px;
-  border-radius: 12px;
 }
 
 .stats-container {
@@ -244,11 +242,11 @@
   font-size: 1.2rem;
 }
 
-.delta-plus {
+.delta-up, .delta-plus {
   color: #d32f2f; /* Красный - коллизий стало больше */
 }
 
-.delta-minus {
+.delta-down, .delta-minus {
   color: #2e7d32; /* Зеленый - коллизий стало меньше */
 }
 
@@ -258,4 +256,29 @@
   color: #2c3e50;
   font-weight: 700;
   margin-bottom: 20px;
+}
+
+/* Дополнительные стили для ProjectDashboard */
+.db-stats-box {
+  background-color: #e3f2fd;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.db-stats-title {
+  color: #1976d2;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.db-stats-value {
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.db-stats-delta {
+  font-size: 1.2rem;
+  margin-left: 10px;
 }

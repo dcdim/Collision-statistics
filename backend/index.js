@@ -1,10 +1,25 @@
 const express = require('express');
-const cors = require('cors');
 const db = require('./db');
+const { DB_CONFIGS } = require('./database/config');
 
 const app = express();
-app.use(cors());
 app.use(express.json());
+
+app.get('/api/project-total-collisions/:projectId', async (req, res) => {
+  const pid = req.params.projectId;
+  console.log("!!! СЕРВЕР ПОЛУЧИЛ ЗАПРОС ДЛЯ ПРОЕКТА:", pid);
+  
+  try {
+    const projectDbs = Object.keys(DB_CONFIGS).filter(key => key.startsWith(`${pid}_`));
+    console.log("!!! НАЙДЕНЫ БД:", projectDbs);
+    
+    const stats = await db.getProjectTotalWithDelta(projectDbs);
+    res.json(stats);
+  } catch (err) {
+    console.error("!!! ОШИБКА:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 
@@ -12,28 +27,71 @@ app.get('/api/', (req, res) => {
   res.json({ message: 'API is working' });
 });
 
-app.get('/api/db-list', (req, res) => {
-  res.json(Object.keys(db.DB_CONFIGS));
+// 1. Список проектов
+app.get('/api/projects', (req, res) => {
+  const keys = Object.keys(DB_CONFIGS);
+  const projects = [...new Set(keys.map(key => key.split('_')[0]))];
+  res.json(projects);
 });
 
-app.post('/api/switch-db', (req, res) => {
+// 2. Список БД для проекта
+app.get('/api/databases/:projectId', (req, res) => {
+  const { projectId } = req.params;
+  const filteredDbs = Object.keys(DB_CONFIGS).filter(key => key.startsWith(`${projectId}_`));
+  res.json(filteredDbs);
+});
+
+// 3. Переключение БД (обязательно с await, чтобы пул успел создаться)
+app.post('/api/switch-db', async (req, res) => {
   const { dbName } = req.body;
-  if (!dbName || !db.DB_CONFIGS[dbName]) {
-    return res.status(400).json({ error: 'Invalid DB name' });
-  }
-  db.setDb(dbName);
-  res.json({ ok: true, dbName });
-});
-
-app.get('/api/total-collisions', async (req, res) => {
   try {
-    const total = await db.getTotalCollisions();
-    res.json({ total });
+    if (!dbName) throw new Error('dbName is required');
+    await db.setDb(dbName); // Ждем создания пула
+    console.log(`Server: Successfully switched to ${dbName}`);
+    res.json({ success: true, currentDb: dbName });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Switch DB Error:', err.message);
+    res.status(400).json({ error: err.message });
   }
 });
 
+// --- МАРШРУТЫ ДЛЯ ГРАФИКОВ ---
+
+app.get('/api/updates/:type', async (req, res) => {
+  const { type } = req.params;
+  
+  try {
+    // ПРОВЕРКА: Если пул еще не создан (currentPool === null)
+    // Это основная причина ошибки 500
+    let data;
+    switch (type) {
+      case 'arkr': data = await db.getEntriesUpdatesArKr(); break;
+      case 'arar': data = await db.getEntriesUpdatesArAr(); break;
+      case 'arth': data = await db.getEntriesUpdatesArTh(); break;
+      case 'krkr': data = await db.getEntriesUpdatesKrKr(); break;
+      case 'krth': data = await db.getEntriesUpdatesKrTh(); break;
+      case 'thth': data = await db.getEntriesUpdatesThTh(); break;
+      case 'aren': data = await db.getEntriesUpdatesArEn(); break;
+      case 'kren': data = await db.getEntriesUpdatesKrEn(); break;
+      case 'then': data = await db.getEntriesUpdatesThEn(); break;
+      case 'enen': data = await db.getEntriesUpdatesEnEn(); break;
+      case 'arduble': data = await db.getEntriesUpdatesArDuble(); break;
+      case 'krduble': data = await db.getEntriesUpdatesKrDuble(); break;
+      case 'enduble': data = await db.getEntriesUpdatesEnDuble(); break;
+      default: return res.status(404).json({ error: 'Unknown chart type' });
+    }
+    
+    // Если данных нет, возвращаем пустой массив, чтобы фронтенд не падал
+    res.json(data || []);
+    
+  } catch (err) {
+    // Выводим реальную причину ошибки в консоль сервера
+    console.error(`Error in /api/updates/${type}:`, err.message);
+    res.status(500).json({ error: 'Database connection not ready' });
+  }
+});
+
+// Статистика
 app.get('/api/total-stats', async (req, res) => {
   try {
     const stats = await db.getTotalStats();
@@ -43,271 +101,51 @@ app.get('/api/total-stats', async (req, res) => {
   }
 });
 
-app.get('/api/entries', async (req, res) => {
+app.get('/api/project-total-collisions/:projectId', async (req, res) => {
+  const { projectId } = req.params;
   try {
-    const entries = await db.getEntries();
-    res.json(entries);
+    // 1. Находим все БД, принадлежащие этому проекту
+    const projectDbs = Object.keys(DB_CONFIGS).filter(key => key.startsWith(`${projectId}_`));
+    
+    if (projectDbs.length === 0) {
+      return res.json({ total: 0 });
+    }
+
+    // 2. Вызываем суммирующую функцию
+    const total = await db.getTotalCollisionsByProject(projectDbs);
+    
+    res.json({ total });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.get('/api/comparison', async (req, res) => {
+// Детали
+app.get('/api/details/:type', async (req, res) => {
+  const { type } = req.params;
   try {
-    const entriesUpdates = await db.getEntriesUpdatesArKr();
-    res.json(entriesUpdates);
+    let details;
+    switch (type) {
+      case 'arar': details = await db.getArArDetails(); break;
+      case 'arkr': details = await db.getArKrDetails(); break;
+      case 'arth': details = await db.getArThDetails(); break;
+      case 'krkr': details = await db.getKrKrDetails(); break;
+      case 'krth': details = await db.getKrThDetails(); break;
+      case 'thth': details = await db.getThThDetails(); break;
+      case 'aren': details = await db.getArEnDetails(); break;
+      case 'kren': details = await db.getKrEnDetails(); break;
+      case 'then': details = await db.getThEnDetails(); break;
+      case 'enen': details = await db.getEnEnDetails(); break;
+      case 'enduble': details = await db.getEnDubleDetails(); break;
+      default: return res.status(404).json({ error: 'Unknown details type' });
+    }
+    res.json(details || []);
   } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/comparison/arar', async (req, res) => {
-  try {
-    const entriesUpdates = await db.getEntriesUpdatesArAr();
-    res.json(entriesUpdates);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/comparison/arth', async (req, res) => {
-  try {
-    const entriesUpdates = await db.getEntriesUpdatesArTh();
-    res.json(entriesUpdates);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/comparison/krkr', async (req, res) => {
-  try {
-    const entriesUpdates = await db.getEntriesUpdatesKrKr();
-    res.json(entriesUpdates);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/comparison/krth', async (req, res) => {
-  try {
-    const entriesUpdates = await db.getEntriesUpdatesKrTh();
-    res.json(entriesUpdates);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/comparison/thth', async (req, res) => {
-  try {
-    const entriesUpdates = await db.getEntriesUpdatesThTh();
-    res.json(entriesUpdates);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/comparison/aren', async (req, res) => {
-  try {
-    const entriesUpdates = await db.getEntriesUpdatesArEn();
-    res.json(entriesUpdates);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/comparison/kren', async (req, res) => {
-  try {
-    const entriesUpdates = await db.getEntriesUpdatesKrEn();
-    res.json(entriesUpdates);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/comparison/then', async (req, res) => {
-  try {
-    const entriesUpdates = await db.getEntriesUpdatesThEn();
-    res.json(entriesUpdates);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/comparison/arduble', async (req, res) => {
-  try {
-    const entriesUpdates = await db.getEntriesUpdatesArDuble();
-    res.json(entriesUpdates);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/comparison/krduble', async (req, res) => {
-  try {
-    const entriesUpdates = await db.getEntriesUpdatesKrDuble();
-    res.json(entriesUpdates);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/comparison/enduble', async (req, res) => {
-  try {
-    const entriesUpdates = await db.getEntriesUpdatesEnDuble();
-    res.json(entriesUpdates);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/comparison/enen', async (req, res) => {
-  try {
-    const entriesUpdates = await db.getEntriesUpdatesEnEn();
-    res.json(entriesUpdates);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/details/arar', async (req, res) => {
-  try {
-    const details = await db.getArArDetails();
-    res.json(details);
-  } catch (err) {
-    console.error('Ошибка при получении деталей АР-АР:', err);
-    res.status(500).json({ error: 'Ошибка сервера при обработке статистики' });
-  }
-
-});
-app.get('/api/details/arkr', async (req, res) => {
-  try {
-    const details = await db.getArKrDetails();
-    res.json(details);
-  } catch (err) {
-    console.error('Ошибка при получении деталей АР-КР:', err);
-    res.status(500).json({ error: 'Ошибка сервера при обработке статистики' });
-  }
-});
-
-
-app.get('/api/details/arth', async (req, res) => {
-  try {
-    const details = await db.getArThDetails();
-    res.json(details);
-  } catch (err) {
-    console.error('Ошибка при получении деталей АР-ТХ:', err);
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
-});
-
-app.get('/api/details/krkr', async (req, res) => {
-  try {
-    const details = await db.getKrKrDetails();
-    res.json(details);
-  } catch (err) {
-    console.error('Ошибка при получении деталей КР-КР:', err);
-    res.status(500).json({ error: 'Ошибка сервера при загрузке данных КР-КР' });
-  }
-});
-
-app.get('/api/details/krth', async (req, res) => {
-  try {
-    const details = await db.getKrThDetails();
-    res.json(details);
-  } catch (err) {
-    console.error('Ошибка при получении деталей КР-ТХ:', err);
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
-});
-
-app.get('/api/details/thth', async (req, res) => {
-  try {
-    const details = await db.getThThDetails();
-    res.json(details);
-  } catch (err) {
-    console.error('Ошибка при получении деталей ТХ-ТХ:', err);
-    res.status(500).json({ error: 'Ошибка сервера при обработке статистики ТХ-ТХ' });
-  }
-});
-
-app.get('/api/details/aren', async (req, res) => {
-  try {
-    const details = await db.getArEnDetails();
-    res.json(details || []); 
-  } catch (err) {
-    console.error('Ошибка при получении деталей АР-ИС:', err);
-    res.status(500).json({ error: 'Ошибка базы данных', message: err.message });
-  }
-});
-
-app.get('/api/details/kren', async (req, res) => {
-  try {
-    const details = await db.getKrEnDetails();
-    res.json(details || []); 
-  } catch (err) {
-    console.error('Ошибка при получении деталей КР-ИС:', err);
-    res.status(500).json({ error: 'Ошибка базы данных', message: err.message });
-  }
-});
-
-app.get('/api/details/then', async (req, res) => {
-  try {
-    const details = await db.getThEnDetails();
-    res.json(details || []); 
-  } catch (err) {
-    console.error('Ошибка при получении деталей ТХ-ИС:', err);
-    res.status(500).json({ error: 'Ошибка базы данных', message: err.message });
-  }
-});
-
-app.get('/api/details/enen', async (req, res) => {
-  try {
-    const details = await db.getEnEnDetails();
-    res.json(details || []); 
-  } catch (err) {
-    console.error('Ошибка при получении деталей ИС-ИС:', err);
-    res.status(500).json({ error: 'Ошибка базы данных', message: err.message });
-  }
-});
-
-app.get('/api/details/enduble', async (req, res) => {
-  try {
-    const details = await db.getEnDubleDetails();
-    res.json(details || []); 
-  } catch (err) {
-    console.error('Ошибка при получении деталей ИС-ИС:', err);
-    res.status(500).json({ error: 'Ошибка базы данных', message: err.message });
+    console.error(`Details error ${type}:`, err.message);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server listening on port ${PORT}`);
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Добавление роли пользователя
-
-app.post('/users/:id/role', async (req, res) => {
-  const { id } = req.params;
-  const { role } = req.body;
-  await db.query('UPDATE users SET role = $1 WHERE id = $2', [role, id]);
-  await db.query('INSERT INTO logs (user_id, action) VALUES ($1, $2)', [id, 'role_changed']);
-  res.status(200).json({ message: 'Role updated' });
-});
-
-
-const validateEmail = (email) => {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-};

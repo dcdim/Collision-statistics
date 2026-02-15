@@ -1,53 +1,63 @@
 const express = require('express');
+const cors = require('cors');
 const db = require('./db');
 const { DB_CONFIGS } = require('./database/config');
 
 const app = express();
-app.use(express.json());
 
-app.get('/api/project-total-collisions/:projectId', async (req, res) => {
-  const pid = req.params.projectId;
-  console.log("!!! СЕРВЕР ПОЛУЧИЛ ЗАПРОС ДЛЯ ПРОЕКТА:", pid);
-  
-  try {
-    const projectDbs = Object.keys(DB_CONFIGS).filter(key => key.startsWith(`${pid}_`));
-    console.log("!!! НАЙДЕНЫ БД:", projectDbs);
-    
-    const stats = await db.getProjectTotalWithDelta(projectDbs);
-    res.json(stats);
-  } catch (err) {
-    console.error("!!! ОШИБКА:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
+// MIDDLEWARE
+app.use(cors());
+app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
+// ТЕСТОВЫЙ МАРШРУТ
 app.get('/api/', (req, res) => {
   res.json({ message: 'API is working' });
 });
 
-// 1. Список проектов
+// ГЛОБАЛЬНАЯ СТАТИСТИКА ПО ОБЪЕКТУ (СУММА + ДЕЛЬТА)
+app.get('/api/project-total-collisions/:projectId', async (req, res) => {
+  const { projectId } = req.params;
+  console.log("!!! ЗАПРОС СТАТИСТИКИ ОБЪЕКТА:", projectId);
+  
+  try {
+    const projectDbs = Object.keys(DB_CONFIGS).filter(key => key.startsWith(`${projectId}_`));
+    
+    if (projectDbs.length === 0) {
+      return res.json({ total: 0, delta: 0 });
+    }
+
+    // Вызываем вашу новую функцию из db.js
+    const stats = await db.getProjectTotalWithDelta(projectDbs);
+    res.json(stats);
+  } catch (err) {
+    console.error("!!! ОШИБКА ОБЪЕКТА:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// СПИСОК ПРОЕКТОВ
 app.get('/api/projects', (req, res) => {
   const keys = Object.keys(DB_CONFIGS);
   const projects = [...new Set(keys.map(key => key.split('_')[0]))];
   res.json(projects);
 });
 
-// 2. Список БД для проекта
+// СПИСОК БД ДЛЯ ПРОЕКТА
 app.get('/api/databases/:projectId', (req, res) => {
   const { projectId } = req.params;
   const filteredDbs = Object.keys(DB_CONFIGS).filter(key => key.startsWith(`${projectId}_`));
   res.json(filteredDbs);
 });
 
-// 3. Переключение БД (обязательно с await, чтобы пул успел создаться)
+// ПЕРЕКЛЮЧЕНИЕ БД
 app.post('/api/switch-db', async (req, res) => {
   const { dbName } = req.body;
   try {
     if (!dbName) throw new Error('dbName is required');
-    await db.setDb(dbName); // Ждем создания пула
-    console.log(`Server: Successfully switched to ${dbName}`);
+    await db.setDb(dbName);
+    console.log(`Server: Switched to ${dbName}`);
     res.json({ success: true, currentDb: dbName });
   } catch (err) {
     console.error('Switch DB Error:', err.message);
@@ -55,14 +65,10 @@ app.post('/api/switch-db', async (req, res) => {
   }
 });
 
-// --- МАРШРУТЫ ДЛЯ ГРАФИКОВ ---
-
+// ДАННЫЕ ДЛЯ ГРАФИКОВ
 app.get('/api/updates/:type', async (req, res) => {
   const { type } = req.params;
-  
   try {
-    // ПРОВЕРКА: Если пул еще не создан (currentPool === null)
-    // Это основная причина ошибки 500
     let data;
     switch (type) {
       case 'arkr': data = await db.getEntriesUpdatesArKr(); break;
@@ -80,18 +86,14 @@ app.get('/api/updates/:type', async (req, res) => {
       case 'enduble': data = await db.getEntriesUpdatesEnDuble(); break;
       default: return res.status(404).json({ error: 'Unknown chart type' });
     }
-    
-    // Если данных нет, возвращаем пустой массив, чтобы фронтенд не падал
     res.json(data || []);
-    
   } catch (err) {
-    // Выводим реальную причину ошибки в консоль сервера
     console.error(`Error in /api/updates/${type}:`, err.message);
-    res.status(500).json({ error: 'Database connection not ready' });
+    res.status(500).json({ error: 'Database error' });
   }
 });
 
-// Статистика
+// ЛОКАЛЬНАЯ СТАТИСТИКА ВЫБРАННОЙ БД
 app.get('/api/total-stats', async (req, res) => {
   try {
     const stats = await db.getTotalStats();
@@ -101,26 +103,7 @@ app.get('/api/total-stats', async (req, res) => {
   }
 });
 
-app.get('/api/project-total-collisions/:projectId', async (req, res) => {
-  const { projectId } = req.params;
-  try {
-    // 1. Находим все БД, принадлежащие этому проекту
-    const projectDbs = Object.keys(DB_CONFIGS).filter(key => key.startsWith(`${projectId}_`));
-    
-    if (projectDbs.length === 0) {
-      return res.json({ total: 0 });
-    }
-
-    // 2. Вызываем суммирующую функцию
-    const total = await db.getTotalCollisionsByProject(projectDbs);
-    
-    res.json({ total });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Детали
+// ДЕТАЛИЗАЦИЯ
 app.get('/api/details/:type', async (req, res) => {
   const { type } = req.params;
   try {
@@ -141,7 +124,6 @@ app.get('/api/details/:type', async (req, res) => {
     }
     res.json(details || []);
   } catch (err) {
-    console.error(`Details error ${type}:`, err.message);
     res.status(500).json({ error: 'Server error' });
   }
 });

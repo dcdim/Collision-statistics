@@ -84,9 +84,13 @@ const DetailsPageKRTH = () => {
   const { projectId } = useParams();
   const [data, setData] = useState([]);
   const [dbList, setDbList] = useState([]);
+  const [selectedDb, setSelectedDb] = useState(''); // Стейт для синхронизации селектора
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({}); 
   const navigate = useNavigate();
+
+  // Ключ для хранения выбранной БД в рамках конкретного проекта
+  const STORAGE_KEY = `selectedDb_${projectId}`;
 
   const loadData = () => {
     setLoading(true);
@@ -113,13 +117,20 @@ const DetailsPageKRTH = () => {
         setDbList(dbs);
 
         if (dbs.length > 0) {
-          // 2. Устанавливаем текущую БД на бэкенде (по умолчанию первую)
+          // 2. Определяем БД для активации (из localStorage или первую в списке)
+          const savedDb = localStorage.getItem(STORAGE_KEY);
+          const dbToActivate = (savedDb && dbs.includes(savedDb)) ? savedDb : dbs[0];
+          
+          setSelectedDb(dbToActivate);
+
+          // 3. Устанавливаем выбранную БД на бэкенде
           await fetch('/api/switch-db', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dbName: dbs[0] }),
+            body: JSON.stringify({ dbName: dbToActivate }),
           });
-          // 3. Загружаем коллизии
+          
+          // 4. Загружаем коллизии
           loadData();
         } else {
           setLoading(false);
@@ -141,6 +152,11 @@ const DetailsPageKRTH = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dbName }),
       });
+      
+      // Сохраняем выбор в localStorage и обновляем стейт
+      localStorage.setItem(STORAGE_KEY, dbName);
+      setSelectedDb(dbName);
+      
       setOpenRows({});
       loadData();
     } catch (e) {
@@ -162,8 +178,8 @@ const DetailsPageKRTH = () => {
             </Button>
           )}
         </Box>
-        {/* Передаем dbList, чтобы селектор корректно отображал секции текущего проекта */}
-        <DbSelector dbList={dbList} onSelect={handleDbChange} />
+        {/* Передаем selectedDb для управления значением внутри селектора */}
+        <DbSelector dbList={dbList} selectedDb={selectedDb} onSelect={handleDbChange} />
       </Box>
 
       <Typography variant="h4" className="details-title">

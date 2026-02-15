@@ -10,8 +10,12 @@ const DetailsPageENDUBLE = () => {
   const { projectId } = useParams();
   const [data, setData] = useState([]);
   const [dbList, setDbList] = useState([]);
+  const [selectedDb, setSelectedDb] = useState(''); // Новое состояние для синхронизации
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  // Ключ для хранения выбора в рамках конкретного проекта
+  const STORAGE_KEY = `selectedDb_${projectId}`;
 
   // Загрузка данных (текущее состояние из сессии сервера)
   const loadData = () => {
@@ -32,7 +36,7 @@ const DetailsPageENDUBLE = () => {
       });
   };
 
-  // Инициализация страницы: загрузка списка БД и установка первой базы проекта
+  // Инициализация страницы: загрузка списка БД и установка корректной базы
   useEffect(() => {
     const initPage = async () => {
       setLoading(true);
@@ -43,13 +47,20 @@ const DetailsPageENDUBLE = () => {
         setDbList(dbs);
 
         if (dbs.length > 0) {
-          // 2. Устанавливаем в сессию сервера первую БД из списка
+          // 2. Пытаемся восстановить базу из localStorage, иначе берем первую
+          const savedDb = localStorage.getItem(STORAGE_KEY);
+          const dbToActivate = (savedDb && dbs.includes(savedDb)) ? savedDb : dbs[0];
+          
+          setSelectedDb(dbToActivate);
+
+          // 3. Устанавливаем в сессию сервера выбранную БД
           await fetch('/api/switch-db', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dbName: dbs[0] }),
+            body: JSON.stringify({ dbName: dbToActivate }),
           });
-          // 3. Загружаем данные из выбранной базы
+          
+          // 4. Загружаем данные из выбранной базы
           loadData();
         } else {
           setLoading(false);
@@ -72,6 +83,11 @@ const DetailsPageENDUBLE = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dbName }),
       });
+      
+      // Сохраняем выбор пользователя в localStorage и обновляем состояние
+      localStorage.setItem(STORAGE_KEY, dbName);
+      setSelectedDb(dbName);
+      
       loadData();
     } catch (err) {
       console.error("Ошибка при смене БД:", err);
@@ -93,7 +109,8 @@ const DetailsPageENDUBLE = () => {
         >
           ← Назад
         </Button>
-        <DbSelector dbList={dbList} onSelect={handleDbChange} />
+        {/* Теперь передаем selectedDb, чтобы селектор отображал верное имя */}
+        <DbSelector dbList={dbList} selectedDb={selectedDb} onSelect={handleDbChange} />
       </Box>
 
       <Typography variant="h4" className="details-title">

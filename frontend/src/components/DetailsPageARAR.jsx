@@ -84,9 +84,12 @@ const DetailsPageARAR = () => {
   const { projectId } = useParams();
   const [data, setData] = useState([]);
   const [dbList, setDbList] = useState([]);
+  const [selectedDb, setSelectedDb] = useState(''); // Для синхронизации селектора
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({}); 
   const navigate = useNavigate();
+
+  const STORAGE_KEY = `selectedDb_${projectId}`;
 
   const loadData = () => {
     setLoading(true);
@@ -113,11 +116,19 @@ const DetailsPageARAR = () => {
         setDbList(dbs);
 
         if (dbs.length > 0) {
+          // Восстанавливаем сохраненную БД из localStorage
+          const savedDb = localStorage.getItem(STORAGE_KEY);
+          const dbToActivate = (savedDb && dbs.includes(savedDb)) ? savedDb : dbs[0];
+          
+          setSelectedDb(dbToActivate);
+
+          // Переключаем на бэкенде
           await fetch('/api/switch-db', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dbName: dbs[0] }),
+            body: JSON.stringify({ dbName: dbToActivate }),
           });
+          
           loadData();
         } else {
           setLoading(false);
@@ -139,6 +150,11 @@ const DetailsPageARAR = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dbName }),
       });
+      
+      // Сохраняем выбор в localStorage
+      localStorage.setItem(STORAGE_KEY, dbName);
+      setSelectedDb(dbName);
+      
       setOpenRows({});
       loadData();
     } catch (err) {
@@ -162,7 +178,8 @@ const DetailsPageARAR = () => {
             </Button>
           )}
         </Box>
-        <DbSelector dbList={dbList} onSelect={handleDbChange} />
+        {/* Добавлен проп selectedDb для корректного отображения в селекторе */}
+        <DbSelector dbList={dbList} selectedDb={selectedDb} onSelect={handleDbChange} />
       </Box>
 
       <Typography variant="h4" className="details-title">

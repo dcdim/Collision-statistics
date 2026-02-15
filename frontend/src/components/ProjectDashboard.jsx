@@ -27,20 +27,26 @@ const ProjectDashboard = () => {
   const [totalData, setTotalData] = useState({ total: 0, delta: 0 });
   const [projectStats, setProjectStats] = useState({ total: 0, delta: 0 });
 
+  // Базовый путь API (проксируется через Nginx)
   const API_BASE = "/api";
 
+  // Уникальный ключ для сохранения выбора конкретного проекта
+  const STORAGE_KEY = `selectedDb_${projectId}`;
+
+  // Функция загрузки статистики по выбранной БД
   const loadTotalStats = async () => {
     try {
       const res = await fetch(`${API_BASE}/total-stats`);
       const data = await res.json();
       setTotalData(data);
     } catch (err) {
-      console.error("Ошибка загрузки общей статистики:", err);
+      console.error("Ошибка загрузки статистики БД:", err);
     }
   };
 
+  // Функция переключения БД (с сохранением в браузер)
   const handleDbChange = async (dbName) => {
-    setLoading(true);
+    // Не ставим глобальный setLoading(true), чтобы графики обновлялись плавно внутри
     try {
       const response = await fetch(`${API_BASE}/switch-db`, {
         method: 'POST',
@@ -50,12 +56,14 @@ const ProjectDashboard = () => {
 
       if (!response.ok) throw new Error('Ошибка при переключении базы данных');
 
+      // Сохраняем выбор в localStorage
+      localStorage.setItem(STORAGE_KEY, dbName);
       setSelectedDb(dbName);
+      
+      // После успешного переключения обновляем локальную статистику
       await loadTotalStats();
     } catch (err) {
       console.error("Ошибка смены БД:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -63,24 +71,30 @@ const ProjectDashboard = () => {
     const init = async () => {
       setLoading(true);
       try {
+        // 1. Получаем список всех БД для этого проекта
         const res = await fetch(`${API_BASE}/databases/${projectId}`);
         const dbs = await res.json();
         setDbList(dbs);
 
+        // 2. Получаем общую статистику по всему проекту (сумма всех его БД)
         try {
           const statsRes = await fetch(`${API_BASE}/project-total-collisions/${projectId}`);
           const statsData = await statsRes.json();
-          
           setProjectStats({
             total: statsData.total || 0,
             delta: statsData.delta || 0
           });
         } catch (statsErr) {
-          console.error("Ошибка при получении общей статистики объекта:", statsErr);
+          console.error("Ошибка при получении статистики объекта:", statsErr);
         }
         
+        // 3. Определяем, какую БД активировать при загрузке
         if (dbs.length > 0) {
-          await handleDbChange(dbs[0]);
+          const savedDb = localStorage.getItem(STORAGE_KEY);
+          // Если сохраненная БД есть в списке этого проекта — берем её, иначе первую из списка
+          const dbToActivate = (savedDb && dbs.includes(savedDb)) ? savedDb : dbs[0];
+          
+          await handleDbChange(dbToActivate);
         } else {
           setTotalData({ total: 0, delta: 0 });
         }
@@ -137,7 +151,7 @@ const ProjectDashboard = () => {
           </Typography>
         </div>
         
-        <DbSelector dbList={dbList} onSelect={handleDbChange} />
+        <DbSelector dbList={dbList} selectedDb={selectedDb} onSelect={handleDbChange} />
       </div>
 
       <table className="charts-table">

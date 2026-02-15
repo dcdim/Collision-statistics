@@ -124,9 +124,13 @@ const DetailsPageAREN = () => {
   const { projectId } = useParams();
   const [data, setData] = useState([]);
   const [dbList, setDbList] = useState([]);
+  const [selectedDb, setSelectedDb] = useState(''); // Для синхронизации селектора
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({});
   const navigate = useNavigate();
+
+  // Ключ для хранения выбора пользователя
+  const STORAGE_KEY = `selectedDb_${projectId}`;
 
   const loadData = () => {
     setLoading(true);
@@ -148,19 +152,24 @@ const DetailsPageAREN = () => {
     const initPage = async () => {
       setLoading(true);
       try {
-        // 1. Получаем список БД для конкретного проекта
         const res = await fetch(`/api/databases/${projectId}`);
         const dbs = await res.json();
         setDbList(dbs);
 
         if (dbs.length > 0) {
-          // 2. Устанавливаем текущую БД на сервере (первую из списка)
+          // Восстанавливаем выбор из localStorage или берем первую БД
+          const savedDb = localStorage.getItem(STORAGE_KEY);
+          const dbToActivate = (savedDb && dbs.includes(savedDb)) ? savedDb : dbs[0];
+          
+          setSelectedDb(dbToActivate);
+
+          // Переключаем БД на сервере
           await fetch('/api/switch-db', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dbName: dbs[0] }),
+            body: JSON.stringify({ dbName: dbToActivate }),
           });
-          // 3. Загружаем данные
+          
           loadData();
         } else {
           setLoading(false);
@@ -182,6 +191,11 @@ const DetailsPageAREN = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dbName }),
       });
+      
+      // Сохраняем выбор пользователя
+      localStorage.setItem(STORAGE_KEY, dbName);
+      setSelectedDb(dbName);
+      
       setOpenRows({});
       loadData();
     } catch (err) { 
@@ -205,8 +219,8 @@ const DetailsPageAREN = () => {
             </Button>
           )}
         </Box>
-        {/* Передаем dbList в селектор, чтобы избежать ошибки .length */}
-        <DbSelector dbList={dbList} onSelect={handleDbChange} />
+        {/* Добавлен проп selectedDb */}
+        <DbSelector dbList={dbList} selectedDb={selectedDb} onSelect={handleDbChange} />
       </Box>
 
       <Typography variant="h4" className="details-title">

@@ -146,9 +146,12 @@ const DetailsPageENEN = () => {
   const { projectId } = useParams();
   const [data, setData] = useState([]);
   const [dbList, setDbList] = useState([]);
+  const [selectedDb, setSelectedDb] = useState(''); // Стейт для синхронизации селектора
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({});
   const navigate = useNavigate();
+
+  const STORAGE_KEY = `selectedDb_${projectId}`;
 
   const loadData = () => {
     setLoading(true);
@@ -168,19 +171,22 @@ const DetailsPageENEN = () => {
     const initPage = async () => {
       setLoading(true);
       try {
-        // 1. Получаем список БД именно для этого проекта
         const res = await fetch(`/api/databases/${projectId}`);
         const dbs = await res.json();
         setDbList(dbs);
 
         if (dbs.length > 0) {
-          // 2. Инициализируем сессию сервера первой БД
+          // Восстанавливаем сохраненную базу или берем первую
+          const savedDb = localStorage.getItem(STORAGE_KEY);
+          const dbToActivate = (savedDb && dbs.includes(savedDb)) ? savedDb : dbs[0];
+          
+          setSelectedDb(dbToActivate);
+
           await fetch('/api/switch-db', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dbName: dbs[0] }),
+            body: JSON.stringify({ dbName: dbToActivate }),
           });
-          // 3. Загружаем данные
           loadData();
         } else {
           setLoading(false);
@@ -202,6 +208,10 @@ const DetailsPageENEN = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dbName }),
       });
+      
+      localStorage.setItem(STORAGE_KEY, dbName);
+      setSelectedDb(dbName);
+      
       setOpenRows({});
       loadData();
     } catch (err) {
@@ -238,7 +248,7 @@ const DetailsPageENEN = () => {
             </Button>
           )}
         </Box>
-        <DbSelector dbList={dbList} onSelect={handleDbChange} />
+        <DbSelector dbList={dbList} selectedDb={selectedDb} onSelect={handleDbChange} />
       </Box>
 
       <Typography variant="h4" className="details-title">

@@ -120,9 +120,12 @@ const DetailsPageTHEN = () => {
   const { projectId } = useParams();
   const [data, setData] = useState([]);
   const [dbList, setDbList] = useState([]);
+  const [selectedDb, setSelectedDb] = useState(''); // Стейт для селектора
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({});
   const navigate = useNavigate();
+
+  const STORAGE_KEY = `selectedDb_${projectId}`;
 
   const loadData = () => {
     setLoading(true);
@@ -149,13 +152,20 @@ const DetailsPageTHEN = () => {
         setDbList(dbs);
 
         if (dbs.length > 0) {
-          // 2. Устанавливаем БД по умолчанию (первую)
+          // 2. Определяем активную БД (из памяти или первую в списке)
+          const savedDb = localStorage.getItem(STORAGE_KEY);
+          const dbToActivate = (savedDb && dbs.includes(savedDb)) ? savedDb : dbs[0];
+          
+          setSelectedDb(dbToActivate);
+
+          // 3. Устанавливаем БД на бэкенде
           await fetch('/api/switch-db', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dbName: dbs[0] }),
+            body: JSON.stringify({ dbName: dbToActivate }),
           });
-          // 3. Грузим данные
+          
+          // 4. Грузим данные
           loadData();
         } else {
           setLoading(false);
@@ -177,6 +187,11 @@ const DetailsPageTHEN = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dbName }),
       });
+      
+      // Сохраняем новый выбор
+      localStorage.setItem(STORAGE_KEY, dbName);
+      setSelectedDb(dbName);
+      
       setOpenRows({});
       loadData();
     } catch (e) { setLoading(false); }
@@ -195,7 +210,7 @@ const DetailsPageTHEN = () => {
             </Button>
           )}
         </Box>
-        <DbSelector dbList={dbList} onSelect={handleDbChange} />
+        <DbSelector dbList={dbList} selectedDb={selectedDb} onSelect={handleDbChange} />
       </Box>
 
       <Typography variant="h4" className="details-title">

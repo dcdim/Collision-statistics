@@ -120,9 +120,12 @@ const DetailsPageKREN = () => {
   const { projectId } = useParams();
   const [data, setData] = useState([]);
   const [dbList, setDbList] = useState([]);
+  const [selectedDb, setSelectedDb] = useState(''); // Новое состояние
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({});
   const navigate = useNavigate();
+
+  const STORAGE_KEY = `selectedDb_${projectId}`;
 
   const loadData = () => {
     setLoading(true);
@@ -143,19 +146,24 @@ const DetailsPageKREN = () => {
     const initPage = async () => {
       setLoading(true);
       try {
-        // 1. Получаем список БД для конкретного проекта
         const res = await fetch(`/api/databases/${projectId}`);
         const dbs = await res.json();
         setDbList(dbs);
 
         if (dbs.length > 0) {
-          // 2. Устанавливаем текущую БД на сервере (первую из списка)
+          // 1. Проверяем localStorage на наличие ранее выбранной базы
+          const savedDb = localStorage.getItem(STORAGE_KEY);
+          const dbToActivate = (savedDb && dbs.includes(savedDb)) ? savedDb : dbs[0];
+          
+          setSelectedDb(dbToActivate);
+
+          // 2. Переключаем на сервере
           await fetch('/api/switch-db', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dbName: dbs[0] }),
+            body: JSON.stringify({ dbName: dbToActivate }),
           });
-          // 3. Загружаем данные
+          
           loadData();
         } else {
           setLoading(false);
@@ -177,9 +185,16 @@ const DetailsPageKREN = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dbName }),
       });
+      
+      // Сохраняем новый выбор
+      localStorage.setItem(STORAGE_KEY, dbName);
+      setSelectedDb(dbName);
+      
       setOpenRows({});
       loadData();
-    } catch (e) { setLoading(false); }
+    } catch (e) { 
+      setLoading(false); 
+    }
   };
 
   const grandTotal = useMemo(() => data.reduce((sum, row) => sum + Number(row.GroupTotal), 0), [data]);
@@ -195,7 +210,8 @@ const DetailsPageKREN = () => {
             </Button>
           )}
         </Box>
-        <DbSelector dbList={dbList} onSelect={handleDbChange} />
+        {/* Передаем выбранную БД в селектор */}
+        <DbSelector dbList={dbList} selectedDb={selectedDb} onSelect={handleDbChange} />
       </Box>
 
       <Typography variant="h4" className="details-title">

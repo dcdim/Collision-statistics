@@ -75,9 +75,13 @@ const DetailsPageTHTH = () => {
   const { projectId } = useParams();
   const [data, setData] = useState([]);
   const [dbList, setDbList] = useState([]);
+  const [selectedDb, setSelectedDb] = useState(''); // Новое состояние для синхронизации
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({}); 
   const navigate = useNavigate();
+
+  // Ключ хранилища для конкретного проекта
+  const STORAGE_KEY = `selectedDb_${projectId}`;
 
   const loadData = () => {
     setLoading(true);
@@ -104,13 +108,19 @@ const DetailsPageTHTH = () => {
         setDbList(dbs);
 
         if (dbs.length > 0) {
-          // 2. Устанавливаем первую БД в сессию сервера
+          // 2. Ищем сохраненную БД или берем первую
+          const savedDb = localStorage.getItem(STORAGE_KEY);
+          const dbToActivate = (savedDb && dbs.includes(savedDb)) ? savedDb : dbs[0];
+          
+          setSelectedDb(dbToActivate);
+
+          // 3. Устанавливаем БД в сессию сервера
           await fetch('/api/switch-db', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dbName: dbs[0] }),
+            body: JSON.stringify({ dbName: dbToActivate }),
           });
-          // 3. Загружаем данные
+          // 4. Загружаем данные
           loadData();
         } else {
           setLoading(false);
@@ -132,6 +142,11 @@ const DetailsPageTHTH = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dbName }),
       });
+      
+      // Сохраняем выбор в память и обновляем UI селектора
+      localStorage.setItem(STORAGE_KEY, dbName);
+      setSelectedDb(dbName);
+
       setOpenRows({});
       loadData();
     } catch (e) {
@@ -152,7 +167,7 @@ const DetailsPageTHTH = () => {
             </Button>
           )}
         </Box>
-        <DbSelector dbList={dbList} onSelect={handleDbChange} />
+        <DbSelector dbList={dbList} selectedDb={selectedDb} onSelect={handleDbChange} />
       </Box>
 
       <Typography variant="h4" className="details-title">

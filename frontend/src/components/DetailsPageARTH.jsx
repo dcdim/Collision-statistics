@@ -84,9 +84,13 @@ const DetailsPageARTH = () => {
   const { projectId } = useParams();
   const [data, setData] = useState([]);
   const [dbList, setDbList] = useState([]);
+  const [selectedDb, setSelectedDb] = useState(''); // Новое состояние для синхронизации селектора
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({}); 
   const navigate = useNavigate();
+
+  // Ключ для localStorage (единый для всех страниц проекта)
+  const STORAGE_KEY = `selectedDb_${projectId}`;
 
   const loadData = () => {
     setLoading(true);
@@ -107,19 +111,25 @@ const DetailsPageARTH = () => {
     const initPage = async () => {
       setLoading(true);
       try {
-        // 1. Получаем список баз данных для проекта
         const res = await fetch(`/api/databases/${projectId}`);
         const dbs = await res.json();
         setDbList(dbs);
 
         if (dbs.length > 0) {
-          // 2. Устанавливаем текущую БД на сервере (первую из списка)
+          // 1. Пытаемся взять БД из localStorage, если нет - берем первую из списка
+          const savedDb = localStorage.getItem(STORAGE_KEY);
+          const dbToActivate = (savedDb && dbs.includes(savedDb)) ? savedDb : dbs[0];
+          
+          setSelectedDb(dbToActivate);
+
+          // 2. Устанавливаем БД на сервере
           await fetch('/api/switch-db', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dbName: dbs[0] }),
+            body: JSON.stringify({ dbName: dbToActivate }),
           });
-          // 3. Грузим данные только после подтверждения переключения
+
+          // 3. Загружаем данные
           loadData();
         } else {
           setLoading(false);
@@ -141,6 +151,11 @@ const DetailsPageARTH = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dbName }),
       });
+      
+      // Сохраняем выбор в localStorage и обновляем состояние
+      localStorage.setItem(STORAGE_KEY, dbName);
+      setSelectedDb(dbName);
+      
       setOpenRows({});
       loadData();
     } catch (err) {
@@ -164,7 +179,8 @@ const DetailsPageARTH = () => {
             </Button>
           )}
         </Box>
-        <DbSelector dbList={dbList} onSelect={handleDbChange} />
+        {/* Добавлен пропс selectedDb */}
+        <DbSelector dbList={dbList} selectedDb={selectedDb} onSelect={handleDbChange} />
       </Box>
 
       <Typography variant="h4" className="details-title">

@@ -56,7 +56,7 @@ function Row({ row, isOpen, onToggle }) {
 
       {!isSingle && (
         <TableRow>
-          <TableCell colSpan={4} sx={{ py: 0, px: 0 }}> 
+          <TableCell colSpan={4} sx={{ py: 0, px: 0, border: 'none' }}> 
             <Collapse in={isOpen} timeout="auto" unmountOnExit>
               <Box className="details-expanded-box-active">
                 <Table size="small" sx={{ tableLayout: 'fixed' }}>
@@ -84,7 +84,7 @@ const DetailsPageARAR = () => {
   const { projectId } = useParams();
   const [data, setData] = useState([]);
   const [dbList, setDbList] = useState([]);
-  const [selectedDb, setSelectedDb] = useState(''); // Для синхронизации селектора
+  const [selectedDb, setSelectedDb] = useState('');
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({}); 
   const navigate = useNavigate();
@@ -102,44 +102,34 @@ const DetailsPageARAR = () => {
       })
       .catch(err => {
         console.error("Ошибка загрузки ARAR:", err);
-        setData([]);
         setLoading(false);
       });
   };
 
   useEffect(() => {
     const initPage = async () => {
-      setLoading(true);
       try {
         const res = await fetch(`/api/databases/${projectId}`);
         const dbs = await res.json();
         setDbList(dbs);
-
         if (dbs.length > 0) {
-          // Восстанавливаем сохраненную БД из localStorage
           const savedDb = localStorage.getItem(STORAGE_KEY);
           const dbToActivate = (savedDb && dbs.includes(savedDb)) ? savedDb : dbs[0];
-          
           setSelectedDb(dbToActivate);
-
-          // Переключаем на бэкенде
           await fetch('/api/switch-db', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ dbName: dbToActivate }),
           });
-          
           loadData();
         } else {
           setLoading(false);
         }
       } catch (err) {
-        console.error("Ошибка инициализации деталей:", err);
         setLoading(false);
       }
     };
-
-    if (projectId) initPage();
+    initPage();
   }, [projectId]);
 
   const handleDbChange = async (dbName) => {
@@ -150,22 +140,16 @@ const DetailsPageARAR = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dbName }),
       });
-      
-      // Сохраняем выбор в localStorage
       localStorage.setItem(STORAGE_KEY, dbName);
       setSelectedDb(dbName);
-      
       setOpenRows({});
       loadData();
     } catch (err) {
-      console.error("Ошибка при смене БД:", err);
       setLoading(false);
     }
   };
 
-  const grandTotal = useMemo(() => {
-    return data.reduce((sum, row) => sum + Number(row.GroupTotal), 0);
-  }, [data]);
+  const grandTotal = useMemo(() => data.reduce((sum, row) => sum + Number(row.GroupTotal), 0), [data]);
 
   return (
     <div className="details-page-container">
@@ -178,7 +162,6 @@ const DetailsPageARAR = () => {
             </Button>
           )}
         </Box>
-        {/* Добавлен проп selectedDb для корректного отображения в селекторе */}
         <DbSelector dbList={dbList} selectedDb={selectedDb} onSelect={handleDbChange} />
       </Box>
 
@@ -189,14 +172,8 @@ const DetailsPageARAR = () => {
       {loading ? (
         <Box sx={{ p: 8, textAlign: 'center' }}>
           <CircularProgress size={40} sx={{ mb: 2 }} />
-          <Typography variant="h6" color="textSecondary">Загрузка данных...</Typography>
+          <Typography variant="h6" color="textSecondary">Загрузка...</Typography>
         </Box>
-      ) : data.length === 0 ? (
-        <Paper sx={{ p: 10, textAlign: 'center', borderRadius: '12px' }}>
-          <Typography variant="h5" color="textSecondary" sx={{ fontWeight: 500 }}>
-            Коллизий не обнаружено
-          </Typography>
-        </Paper>
       ) : (
         <TableContainer component={Paper} elevation={3} sx={{ borderRadius: '12px', overflow: 'hidden' }}>
           <Table sx={{ tableLayout: 'fixed' }}>

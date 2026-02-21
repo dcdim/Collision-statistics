@@ -27,7 +27,7 @@ const ProjectSelection = () => {
 
   return (
     <Box sx={{ p: 4, textAlign: 'center' }}>
-      <Typography variant="h3" gutterBottom sx={{ mb: 6, fontWeight: 'bold' }}>
+      <Typography variant="h3" className="app-title" sx={{ mb: 6, fontWeight: 700 }}>
         Выберите объект
       </Typography>
       <Grid container spacing={4} justifyContent="center">
@@ -42,8 +42,8 @@ const ProjectSelection = () => {
                 '&:hover': { transform: 'translateY(-10px)', boxShadow: 10, bgcolor: '#f5f5f5' }
               }}
             >
-              <BusinessIcon sx={{ fontSize: 100, color: '#1976d2', mb: 2 }} />
-              <Typography variant="h4" color="textPrimary" sx={{ fontWeight: 'bold' }}>
+              <BusinessIcon sx={{ fontSize: 110, color: '#2c3e50', mb: 2 }} />
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#2c3e50' }}>
                 Объект {id}
               </Typography>
             </Card>

@@ -122,17 +122,17 @@ const ProjectDashboard = () => {
   return (
     <div className="app-container">
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4, mt: 2 }}>
-        <Button component={Link} to="/" variant="contained" color="inherit">
+        <Button component={Link} to="/"className="back-button">
           ← К выбору объектов
         </Button>
-        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+        <Typography variant="h4" className="details-title">
           Объект {projectId}
         </Typography>
       </Box>
 
       <div className="header-panel">
         <div className="db-stats-box">
-          <Typography variant="subtitle1" color="primary">Коллизий по объекту:</Typography>
+          <Typography variant="subtitle1" >Коллизий по объекту:</Typography>
           <Typography variant="h4" className="db-stats-value">
             {projectStats.total} 
             <span className={`db-stats-delta ${projectStats.delta > 0 ? 'delta-plus' : 'delta-minus'}`}>
@@ -142,7 +142,7 @@ const ProjectDashboard = () => {
         </div>
         
         <div className="db-stats-box" style={{ marginRight: 'auto' }}>
-          <Typography variant="subtitle1" color="primary">Коллизий для БД:</Typography>
+          <Typography variant="subtitle1">Коллизий для БД:</Typography>
           <Typography variant="h4" className="db-stats-value">
             {totalData.total}
             <span className={`db-stats-delta ${totalData.delta > 0 ? 'delta-plus' : 'delta-minus'}`}>
@@ -163,7 +163,7 @@ const ProjectDashboard = () => {
                 <div className="chart-wrapper">
                   <BarChartARAR projectId={projectId} currentDb={selectedDb} />
                 </div>
-                <Button component={Link} to={`/project/${projectId}/details/arar`} variant="outlined" size="small">Подробнее</Button>
+                <Button component={Link} to={`/project/${projectId}/details/arar`} className="details-button">Подробнее</Button>
               </div>
               
               <div className="chart-card">
@@ -171,7 +171,7 @@ const ProjectDashboard = () => {
                 <div className="chart-wrapper">
                   <BarChartARTH projectId={projectId} currentDb={selectedDb} />
                 </div>
-                <Button component={Link} to={`/project/${projectId}/details/arth`} variant="outlined" size="small">Подробнее</Button>
+                <Button component={Link} to={`/project/${projectId}/details/arth`} className="details-button">Подробнее</Button>
               </div>
 
               <div className="chart-card">
@@ -179,7 +179,7 @@ const ProjectDashboard = () => {
                 <div className="chart-wrapper">
                   <BarChartKRKR projectId={projectId} currentDb={selectedDb} />
                 </div>
-                <Button component={Link} to={`/project/${projectId}/details/krkr`} variant="outlined" size="small">Подробнее</Button>
+                <Button component={Link} to={`/project/${projectId}/details/krkr`} className="details-button">Подробнее</Button>
               </div>
 
               <div className="chart-card">
@@ -187,7 +187,7 @@ const ProjectDashboard = () => {
                 <div className="chart-wrapper">
                   <BarChartKREN projectId={projectId} currentDb={selectedDb} />
                 </div>
-                <Button component={Link} to={`/project/${projectId}/details/kren`} variant="outlined" size="small">Подробнее</Button>
+                <Button component={Link} to={`/project/${projectId}/details/kren`} className="details-button">Подробнее</Button>
               </div>
 
               <div className="chart-card">
@@ -195,7 +195,7 @@ const ProjectDashboard = () => {
                 <div className="chart-wrapper">
                   <BarChartTHEN projectId={projectId} currentDb={selectedDb} />
                 </div>
-                <Button component={Link} to={`/project/${projectId}/details/then`} variant="outlined" size="small">Подробнее</Button>
+                <Button component={Link} to={`/project/${projectId}/details/then`} className="details-button">Подробнее</Button>
               </div>
 
               <div className="chart-card">
@@ -210,7 +210,7 @@ const ProjectDashboard = () => {
                 <div className="chart-wrapper">
                   <BarChartENDUBLE projectId={projectId} currentDb={selectedDb} />
                 </div>
-                <Button component={Link} to={`/project/${projectId}/details/enduble`} variant="outlined" size="small">Подробнее</Button>
+                <Button component={Link} to={`/project/${projectId}/details/enduble`} className="details-button">Подробнее</Button>
               </div>
             </td>
 
@@ -220,7 +220,7 @@ const ProjectDashboard = () => {
                 <div className="chart-wrapper">
                   <BarChartARKR projectId={projectId} currentDb={selectedDb} />
                 </div>
-                <Button component={Link} to={`/project/${projectId}/details/arkr`} variant="outlined" size="small">Подробнее</Button>
+                <Button component={Link} to={`/project/${projectId}/details/arkr`} className="details-button">Подробнее</Button>
               </div>
 
               <div className="chart-card">
@@ -228,7 +228,7 @@ const ProjectDashboard = () => {
                 <div className="chart-wrapper">
                   <BarChartAREN projectId={projectId} currentDb={selectedDb} />
                 </div>
-                <Button component={Link} to={`/project/${projectId}/details/aren`} variant="outlined" size="small">Подробнее</Button>
+                <Button component={Link} to={`/project/${projectId}/details/aren`} className="details-button">Подробнее</Button>
               </div>
 
               <div className="chart-card">
@@ -236,7 +236,7 @@ const ProjectDashboard = () => {
                 <div className="chart-wrapper">
                   <BarChartKRTH projectId={projectId} currentDb={selectedDb} />
                 </div>
-                <Button component={Link} to={`/project/${projectId}/details/krth`} variant="outlined" size="small">Подробнее</Button>
+                <Button component={Link} to={`/project/${projectId}/details/krth`} className="details-button">Подробнее</Button>
               </div>
 
               <div className="chart-card">
@@ -244,7 +244,7 @@ const ProjectDashboard = () => {
                 <div className="chart-wrapper">
                   <BarChartENEN projectId={projectId} currentDb={selectedDb} />
                 </div>
-                <Button component={Link} to={`/project/${projectId}/details/enen`} variant="outlined" size="small">Подробнее</Button>
+                <Button component={Link} to={`/project/${projectId}/details/enen`} className="details-button">Подробнее</Button>
               </div>
 
               <div className="chart-card">
@@ -252,7 +252,7 @@ const ProjectDashboard = () => {
                 <div className="chart-wrapper">
                   <BarChartTHTH projectId={projectId} currentDb={selectedDb} />
                 </div>
-                <Button component={Link} to={`/project/${projectId}/details/thth`} variant="outlined" size="small">Подробнее</Button>
+                <Button component={Link} to={`/project/${projectId}/details/thth`} className="details-button">Подробнее</Button>
               </div>
 
               <div className="chart-card">

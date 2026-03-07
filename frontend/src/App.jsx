@@ -6,7 +6,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import ProjectSelection from './components/ProjectSelection';
 import ProjectDashboard from './components/ProjectDashboard';
 
-// Страницы детализации (убедитесь, что пути к файлам верны)
+// Страницы детализации
 import DetailsPageARAR from './components/DetailsPageARAR';
 import DetailsPageARKR from './components/DetailsPageARKR';
 import DetailsPageARTH from './components/DetailsPageARTH';
@@ -18,7 +18,6 @@ import DetailsPageKREN from './components/DetailsPageKREN';
 import DetailsPageTHEN from './components/DetailsPageTHEN';
 import DetailsPageENEN from './components/DetailsPageENEN';
 import DetailsPageENDUBLE from './components/DetailsPageENDUBLE';
-// Добавьте остальные, если они есть (например, ARDUBLE, KRDUBLE)
 
 function App() {
   return (

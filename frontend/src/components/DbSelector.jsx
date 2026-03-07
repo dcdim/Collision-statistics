@@ -22,7 +22,7 @@ const DbSelector = ({ dbList, selectedDb, onSelect }) => {
         <Select
           labelId="db-selector-label"
           id="db-selector"
-          // ВАЖНО: берем значение из пропсов. Если оно пустое — ставим пустую строку
+          // Берем значение из пропсов. Если оно пустое — ставим пустую строку
           value={selectedDb || ''} 
           label="База Данных"
           onChange={handleChange}

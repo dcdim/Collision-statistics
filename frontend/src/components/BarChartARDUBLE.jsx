@@ -12,7 +12,7 @@ import {
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
-// Вместо { data } принимаем пропсы для управления загрузкой
+// Принимаем пропсы для управления загрузкой
 function BarChartARDUBLE({ projectId, currentDb }) {
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(false);

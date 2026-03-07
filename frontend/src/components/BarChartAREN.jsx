@@ -12,7 +12,7 @@ import {
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
-// Принимаем контекст проекта и БД вместо массива данных
+// Принимаем контекст проекта и БД
 function BarChartAREN({ projectId, currentDb }) {
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(false);

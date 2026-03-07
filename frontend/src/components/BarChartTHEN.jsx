@@ -12,7 +12,7 @@ import {
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
-// Принимаем projectId и currentDb для независимой загрузки данных
+// Принимаем projectId и currentDb
 function BarChartTHEN({ projectId, currentDb }) {
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(false);

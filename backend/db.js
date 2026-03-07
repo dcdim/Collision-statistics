@@ -104,8 +104,6 @@ async function getTotalCollisionsByProject(dbNames) {
   return totalSum;
 }
 
-// В файл db.js
-
 async function getProjectTotalWithDelta(dbNames) {
   let totalCurrent = 0;
   let totalPrevious = 0;
@@ -113,7 +111,7 @@ async function getProjectTotalWithDelta(dbNames) {
   for (const dbName of dbNames) {
     try {
       // 1. Убеждаемся, что пул для этой БД создан
-      // В вашем db.js функция setDb создает пул и кладет его в объект pools[dbName]
+      // Функция setDb создает пул и кладет его в объект pools[dbName]
       if (!pools[dbName]) {
         await setDb(dbName);
       }
@@ -124,7 +122,7 @@ async function getProjectTotalWithDelta(dbNames) {
         continue;
       }
 
-      // 2. SQL запрос (тот же, проверенный)
+      // 2. SQL запрос
       const sql = `
         WITH LastTwoDates AS (
           SELECT DISTINCT "UpdateDate"

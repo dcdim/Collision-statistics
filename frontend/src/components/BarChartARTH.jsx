@@ -12,7 +12,7 @@ import {
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
-// ВАЖНО: Принимаем projectId и currentDb вместо data
+// Принимаем projectId и currentDb
 function BarChartARTH({ projectId, currentDb }) {
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -38,7 +38,7 @@ function BarChartARTH({ projectId, currentDb }) {
               {
                 label: 'Сумма коллизий АР-ТХ',
                 data: collisionsData,
-                backgroundColor: 'rgba(75, 192, 192, 0.7)', // Другой цвет для отличия
+                backgroundColor: 'rgba(75, 192, 192, 0.7)',
                 borderRadius: 4,
               },
             ],

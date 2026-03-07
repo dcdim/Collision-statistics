@@ -12,7 +12,7 @@ import {
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
-// Принимаем контекст вместо данных, чтобы избежать ошибок "undefined.map"
+// Принимаем контекст вместо данных
 function BarChartARKR({ projectId, currentDb }) {
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(false);

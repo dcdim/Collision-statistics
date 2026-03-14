@@ -120,7 +120,7 @@ const DetailsPageKREN = () => {
   const { projectId } = useParams();
   const [data, setData] = useState([]);
   const [dbList, setDbList] = useState([]);
-  const [selectedDb, setSelectedDb] = useState(''); // Новое состояние
+  const [selectedDb, setSelectedDb] = useState('');
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState({});
   const navigate = useNavigate();
@@ -186,7 +186,6 @@ const DetailsPageKREN = () => {
         body: JSON.stringify({ dbName }),
       });
       
-      // Сохраняем новый выбор
       localStorage.setItem(STORAGE_KEY, dbName);
       setSelectedDb(dbName);
       

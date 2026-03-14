@@ -10,7 +10,7 @@ const DetailsPageENDUBLE = () => {
   const { projectId } = useParams();
   const [data, setData] = useState([]);
   const [dbList, setDbList] = useState([]);
-  const [selectedDb, setSelectedDb] = useState(''); // Новое состояние для синхронизации
+  const [selectedDb, setSelectedDb] = useState('');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
